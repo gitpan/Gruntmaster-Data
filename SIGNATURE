@@ -1,0 +1,44 @@
+This file contains message digests of all files listed in MANIFEST,
+signed via the Module::Signature module, version 0.73.
+
+To verify the content in this distribution, first make sure you have
+Module::Signature installed, then type:
+
+    % cpansign -v
+
+It will check each file's integrity, as well as the signature's
+validity.  If "==> Signature verified OK! <==" is not displayed,
+the distribution may already have been compromised, and you should
+not run its Makefile.PL or Build.PL.
+
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+SHA1 eb1d0d5da957761894515f9b395ab27e2da2eaf0 Changes
+SHA1 49d13de97cfdb49a766d8ec8bb8258f2be5e399b MANIFEST
+SHA1 1716a0efb5704f31dfee6f56b0f7a5dd6c3430e7 META.json
+SHA1 780ddab9f1b10ce01d046f4383f9bcbb02355be2 META.yml
+SHA1 f694d92215bd21682d14341190cde4d9bddc7a04 Makefile.PL
+SHA1 83965e8512584da75fa2b4785a74b1e34571d03a README
+SHA1 b53b301e7b2adec8167ad2ce0133ed34260f7a4f gruntmaster-contest
+SHA1 3829cd3b2b2291ebafd09ffed0836367c3c4a9fd gruntmaster-job
+SHA1 8ab0a975961ed3552491569670b97c09212f6aee gruntmaster-problem
+SHA1 27197bc58f6acfd7afa15b7260fdd21be3a54a67 lib/Gruntmaster/Data.pm
+SHA1 26d51534126e30de5d9dd6656737f3d639364eca t/Gruntmaster-Data.t
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
+
+iQIcBAEBCgAGBQJS7XziAAoJEMoENb5ewbNi5ykP/RyClh1P2WBvY852Pahdh41I
+dPYd0OPUIMoW5pDq7YNS6YamZoXRPwhpeNL/6cey1b+R5UwcvehWDclhqxJd4q9B
+IplUY1A4VlqNp0T1DI02QjE4QAoThiC/FvmrhnBJ+ixuRtG1a96nf5IKvnJupbBO
+ZnLWzV3SA0MQ3iynfHhCpcK+XvmFXfqmeNerHgITvfXH/wULNfrzOXOLwLno0L6G
+zdgDto0kuCGxN/STCM9T2haxxhlBCguAwNNIpjqFQW+O0Lmqc9CvB2Ysde+OnXkJ
+lDq66CuVuRgn9o29KPBkTvPDVB9vZi3n1qyB6AdWAci10bEqlCVnEGmQwPrZTz9Q
+dLObbCBYLNB/7BxKiiYnQRD5AkrkfnDR8cDFJNX81zU8gajY+uQT7ja+SlaHmdPb
+x6OWo/0OjJV1kZIOL5K6nasjEs02tLoaJDinseFvGAvXE1hy8spPKqCaGHC5fhnP
+8s8r2hL0MO9TKX5IxJw0bGd1ZKNsH5sM6b+pMg4wxd9NvFqwQb57hYIPg4W1806v
+Oj46g94z+ft5S/YsSyPHvsFXcluiKJwfIod4JCHaaK2Efjl7FC0+80IAawnoeSmb
+KO6XeHRX6bNB8C1/B2g34sFZT4AN5CWA1dgJEw39PnlgzVthh2qvOpkJapd/qFsM
+ht/Ls12gKiEMPMJraH5P
+=YSaw
+-----END PGP SIGNATURE-----

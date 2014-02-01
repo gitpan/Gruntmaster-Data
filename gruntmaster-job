@@ -1,0 +1,104 @@
+#!/usr/bin/perl -w
+use v5.14;
+
+use Gruntmaster::Data;
+
+use IO::Prompter [ -style => 'bold', '-stdio', '-verbatim' ];
+use File::Slurp qw/read_file/;
+use Getopt::Long;
+use Term::ANSIColor qw/RED RESET/;
+use POSIX qw/strftime/;
+
+##################################################
+
+my $contest;
+
+sub cmd_help{
+	exec perldoc => $0
+}
+
+sub cmd_card{
+	say jobcard;
+}
+
+sub cmd_show{
+	local $_ = shift or goto &cmd_list;
+	say "Date: " , strftime ('%c', localtime job_date);
+	say "User: ", job_user;
+	say "Problem: ", problem_name job_problem;
+	say "Extension: ", job_extension;
+	say "Size: ", sprintf "%.2fKB", job_filesize() / 1024;
+	say "Private: ", (job_private() ? 'yes' : 'no');
+	say "Result text: ", job_result_text;
+	say "Daemon: ", job_daemon;
+	say "Compile errors: ", job_errors;
+}
+
+sub cmd_rerun{
+	local $_ = shift or goto &cmd_list;
+	clean_job;
+	$contest//='';
+	PUBLISH jobs => "$contest.$_";
+}
+
+##################################################
+
+GetOptions ( 'contest=s' => \$contest );
+local $Gruntmaster::Data::contest = $contest;
+my $cmd = 'cmd_' . shift;
+cmd_help unless exists $main::{$cmd};
+no strict 'refs';
+$cmd->(@ARGV) if exists $main::{$cmd};
+
+1;
+__END__
+
+=encoding utf-8
+
+=head1 NAME
+
+gruntmaster-job - shell interface to Gruntmaster 6000 job log
+
+=head1 SYNOPSIS
+
+  gruntmaster-job [--contest=mycontest] card
+  gruntmaster-job [--contest=mycontest] show 5
+  gruntmaster-job [--contest=mycontest] rerun 7
+
+=head1 DESCRIPTION
+
+gruntmaster-job is a tool for managing jobs.
+
+Select the contest with the optional argument I<--contest>.
+
+=over
+
+=item B<card>
+
+Prints the number of jobs in the selected contest.
+
+=item B<show> I<id>
+
+Prints detailed information about the job with id I<id>.
+
+=item B<rerun> I<id>
+
+Reruns job I<id>.
+
+=back
+
+=head1 AUTHOR
+
+Marius Gavrilescu E<lt>marius@ieval.roE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (C) 2014 by Marius Gavrilescu
+
+This library is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+
+=cut

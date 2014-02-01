@@ -1,0 +1,171 @@
+#!/usr/bin/perl -w
+use v5.14;
+
+use Gruntmaster::Data;
+use Gruntmaster::Page::Submit;
+
+use IO::Prompter [ -style => 'bold', '-stdio', '-verbatim' ];
+use File::Slurp qw/read_file/;
+use Term::ANSIColor qw/RED RESET/;
+use Getopt::Long qw/:config require_order/;
+
+##################################################
+
+my $contest;
+
+sub cmd_help{
+	exec perldoc => $0
+}
+
+sub prompt_file{
+	my ($meta, $name, $prefix) = @_;
+	my $filename = prompt '$prefix filename', -complete => 'filenames';
+	$meta->{files}{$name}{content} = read_file $filename;
+	$meta->{files}{$name}{format} = prompt '$prefix format', -menu => Gruntmaster::Page::Submit::FORMATS;
+	$meta->{files}{$name}{name} = prompt "$prefix filename [$filename]", -default => $filename;
+}
+
+sub cmd_add{
+	my $id = shift;
+	my $name = prompt 'Problem name';
+	my $author = prompt 'Problem author (full name)';
+	my $owner = prompt 'Problem owner (username)';
+	my $level = prompt 'Problem level', -menu => "beginner\neasy\nmedium\nhard";
+	my $statement = read_file prompt 'File with problem statement', -complete => 'filenames';
+	my %meta;
+	$meta{generator} = prompt 'Generator', -menu => "File\nRun\nUndef";
+	$meta{runner} = prompt 'Runner', -menu => "File\nVerifier\nInteractive";
+	$meta{judge} = prompt 'Judge', -menu => "Absolute\nPoints";
+	$meta{testcnt} = prompt 'Test count', '-i';
+
+	$meta{timeout} = prompt 'Time limit (seconds)', '-n';
+	delete $meta{timeout} unless $meta{timeout};
+	$meta{olimit} = prompt 'Output limit (bytes)', '-i';
+	delete $meta{olimit} unless $meta{olimit};
+	say 'Memory limits are broken, so I won\'t ask you for one';
+
+	if ($meta{generator} eq 'File') {
+		my $prefix = prompt '[Generator::File] Input file prefix';
+		$meta{infile}[$_ - 1] = read_file "$prefix$_.in" for 1 .. $meta{testcnt};
+	}
+
+	prompt_file \%meta, gen => '[Generator::Run] Generator' if $meta{generator} eq 'Run';
+
+	if ($meta{runner} eq 'File') {
+		my $prefix = prompt '[Runner::File] Output file prefix';
+		$meta{okfile}[$_ - 1] = read_file "$prefix$_.ok" for 1 .. $meta{testcnt};
+		$meta{tests}[$_ - 1] = prompt "[Runner::File] Score for test ${_} [10]", '-i', -default => 10 for 1 .. $meta{testcnt};
+	}
+
+	prompt_file \%meta, ver => '[Runner::Verifier] Verifier' if $meta{runner} eq 'Verifier';
+
+	if ($meta{runner} eq 'Interactive') {
+		say RED, 'WARNING: Runner::Interactive is experimental', RESET;
+		prompt_file int => '[Runner::Interactive] Interactive verifier';
+	}
+
+	insert_problem $id => name => $name, level => $level, statement => $statement, author => $author, owner => $owner;
+	set_problem_meta $id => \%meta;
+	PUBLISH genpage => $contest ? "ct/$contest/pb/index.html" : 'pb/index.html';
+	PUBLISH genpage => $contest ? "ct/$contest/pb/$id.html" : "pb/$id.html";
+}
+
+sub cmd_set{
+	my $file;
+	GetOptions ( 'file!' => \$file );
+	my ($id, %values) = @ARGV;
+	%values = map { $_ => scalar read_file $values{$_} } keys %values if $file;
+	edit_problem $id => %values;
+	PUBLISH genpage => 'pb/index.html';
+	PUBLISH genpage => "pb/$id.html";
+}
+
+sub cmd_list{
+	local $, = "\n";
+	say problems;
+}
+
+sub cmd_rm{
+	remove_problem shift;
+	PUBLISH genpage => $contest ? "ct/$contest/pb/index.html" : 'pb/index.html';
+}
+
+sub cmd_show{
+	local $_ = shift or goto &cmd_list;
+}
+
+##################################################
+
+GetOptions ( 'contest=s' => \$contest );
+local $Gruntmaster::Data::contest = $contest;
+my $cmd = 'cmd_' . shift;
+cmd_help unless exists $main::{$cmd};
+no strict 'refs';
+$cmd->(@ARGV) if exists $main::{$cmd};
+
+1;
+__END__
+
+=encoding utf-8
+
+=head1 NAME
+
+gruntmaster-problem - shell interface to Gruntmaster 6000 problems
+
+=head1 SYNOPSIS
+
+  gruntmaster-problem [--contest=mycontest] add problem_id
+  gruntmaster-problem [--contest=mycontest] list
+  gruntmaster-problem [--contest=mycontest] rm problem_id
+  gruntmaster-problem [--contest=mycontest] show problem_id
+  gruntmaster-problem [--contest=mycontest] set [--file] problem_id key value
+
+=head1 DESCRIPTION
+
+gruntmaster-problem is a tool for managing problems.
+
+Select the contest with the optional argument I<--contest>.
+
+=over
+
+=item B<list>
+
+Prints the list of problems in the selected contest.
+
+=item B<show> I<id>
+
+Prints detailed information about problem I<id>.
+
+=item B<add> I<id>
+
+Adds a new problem with id I<id>.
+
+=item B<rm> I<id>
+
+Removes the problem with id I<id>.
+
+=item B<set> I<id> I<key> I<value>
+
+Sets the I<key> configuration option of problem I<id> to I<value>.
+
+=item B<set> --file I<id> I<key> I<file>
+
+Sets the I<key> configuration option of problem I<id> to the contents of the file I<file>.
+
+=back
+
+=head1 AUTHOR
+
+Marius Gavrilescu E<lt>marius@ieval.roE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (C) 2014 by Marius Gavrilescu
+
+This library is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+
+=cut

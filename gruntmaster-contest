@@ -1,0 +1,107 @@
+#!/usr/bin/perl -w
+use v5.14;
+
+use Gruntmaster::Data;
+
+use IO::Prompter [ -style => 'bold', '-stdio', '-verbatim' ];
+use POSIX qw/strftime/;
+use Date::Parse qw/str2time/;
+
+##################################################
+
+sub cmd_help{
+	exec perldoc => $0
+}
+
+sub cmd_list{
+	local $, = "\n";
+	say contests;
+}
+
+sub cmd_show{
+	local $_ = shift or goto &cmd_list;
+	say "Name: ", contest_name;
+	say "Owner: ", contest_owner;
+	say "Start: ", strftime '%c', localtime contest_start;
+	say "End: ", strftime '%c', localtime contest_end;
+}
+
+sub cmd_add{
+	my $id = shift;
+	my $name = prompt 'Contest name';
+	my $owner = prompt 'Owner';
+	my $start = str2time prompt 'Start time' or die 'Cannot parse time';
+	my $end = str2time prompt 'End time' or die 'Cannot parse time';
+
+	insert_contest $id => name => $name, owner => $owner, start => $start, end => $end;
+	PUBLISH genpage => "ct/$id/index.html";
+	PUBLISH genpage => "ct/index.html";
+}
+
+sub cmd_rm{
+	remove_contest shift;
+	PUBLISH genpage => "ct/index.html";
+}
+
+##################################################
+
+no strict 'refs';
+my $cmd = 'cmd_' . shift;
+cmd_help unless exists $main::{$cmd};
+$cmd->(@ARGV) if exists $main::{$cmd};
+
+1;
+__END__
+
+=encoding utf-8
+
+=head1 NAME
+
+gruntmaster-contest - shell interface to Gruntmaster 6000 contests
+
+=head1 SYNOPSIS
+
+  gruntmaster-contest list
+  gruntmaster-contest show id
+  gruntmaster-contest add id
+  gruntmaster-contest rm id
+
+=head1 DESCRIPTION
+
+gruntmaster-contest is a tool for managing contests.
+
+=over
+
+=item B<list>
+
+Prints the list of contests.
+
+=item B<show> I<id>
+
+Prints detailed information about the contest with id I<id>.
+
+=item B<add> I<id>
+
+Adds a new contest with id I<id>.
+
+=item B<rm> I<id>
+
+Removes the contest with id I<id>
+
+=back
+
+=head1 AUTHOR
+
+Marius Gavrilescu E<lt>marius@ieval.roE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (C) 2014 by Marius Gavrilescu
+
+This library is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+
+=cut

@@ -1,0 +1,36 @@
+Gruntmaster-Data version 5999.000_001
+=====================================
+
+Gruntmaster-Data contains the Gruntmaster::Data module and associated tools.
+
+Gruntmaster::Data is the Redis interface used by the Gruntmaster 6000 Online Judge.
+
+INSTALLATION
+
+To install this module type the following:
+
+   perl Makefile.PL
+   make
+   make test
+   make install
+
+DEPENDENCIES
+
+This module requires these other modules and libraries:
+
+* Date::Parse
+* File::Slurp
+* IO::Prompter
+* JSON
+* Redis
+* Sub::Name
+* Term::ANSIColor
+
+COPYRIGHT AND LICENCE
+
+Copyright (C) 2014 by Marius Gavrilescu
+
+This library is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.

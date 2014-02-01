@@ -1,0 +1,12 @@
+Changes
+Makefile.PL
+MANIFEST
+README
+gruntmaster-contest
+gruntmaster-job
+gruntmaster-problem
+t/Gruntmaster-Data.t
+lib/Gruntmaster/Data.pm
+META.yml                                 Module YAML meta-data (added by MakeMaker)
+META.json                                Module JSON meta-data (added by MakeMaker)
+SIGNATURE                                Public-key signature (added by MakeMaker)
