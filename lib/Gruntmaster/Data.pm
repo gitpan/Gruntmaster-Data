@@ -7,7 +7,7 @@ use JSON qw/encode_json decode_json/;
 use Redis;
 use Sub::Name qw/subname/;
 
-our $VERSION = '5999.000_001';
+our $VERSION = '5999.000_002';
 
 our $contest;
 my $redis = Redis->new;
@@ -20,7 +20,7 @@ sub dynsub{
 }
 
 BEGIN {
-	for my $cmd (qw/multi exec smembers get hget hdel hset sadd srem incr hmset hsetnx publish del/) {
+	for my $cmd (qw/multi exec smembers get hget hgetall hdel hset sadd srem incr hmset hsetnx publish del/) {
 		dynsub uc $cmd, sub { $redis->$cmd(@_) };
 	}
 
@@ -75,10 +75,10 @@ sub defhash{
 	};
 }
 
-defhash problem => qw/name level statement owner author/;
+defhash problem => qw/name level difficulty statement owner author private generator runner judge testcnt timeout olimit/;
 defhash contest => qw/start end name owner/;
 defhash job => qw/date errors extension filesize private problem result result_text user/;
-defhash user => qw/name email town university level/;
+defhash user => qw/name email lastjob town university level/;
 
 sub clean_job (_){
 	HDEL cp . "job.$_[0]", qw/result result_text results daemon/
@@ -131,7 +131,7 @@ The current contest is selected by setting the C<< $Gruntmaster::Data::contest >
 
 Gruntmaster::Data exports some functions for talking directly to the Redis server. These functions should not normally be used, except for B<MULTI>, B<EXEC>, B<PUBLISH>, B<SUBSCRIBE> and B<WAIT_FOR_MESSAGES>.
 
-These functions correspond to Redis commands. The current list is: B<< MULTI EXEC SMEMBERS GET HGET HDEL HSET SADD SREM INCR HMSET HSETNX DEL PUBLISH SUBSCRIBE WAIT_FOR_MESSAGES >>.
+These functions correspond to Redis commands. The current list is: B<< MULTI EXEC SMEMBERS GET HGET HGETALL HDEL HSET SADD SREM INCR HMSET HSETNX DEL PUBLISH SUBSCRIBE WAIT_FOR_MESSAGES >>.
 
 =head2 Problems
 
@@ -165,6 +165,14 @@ Returns a problem's level. The levels are beginner, easy, medium, hard.
 
 Sets a problem's level. The levels are beginner, easy, medium, hard.
 
+=item B<problem_difficulty> I<$problem>
+
+Returns a problem's difficulty.
+
+=item B<set_problem_difficulty> I<$problem>, I<$name>
+
+Sets a problem's difficulty.
+
 =item B<problem_statement> I<$problem>
 
 Returns a problem's statement.
@@ -188,6 +196,62 @@ Returns a problem's author.
 =item B<set_problem_author> I<$problem>, I<$author>
 
 Sets a problem's author.
+
+=item B<problem_private> I<$problem>
+
+Returns a problem's private flag (true if the problem is private, false otherwise).
+
+=item B<set_problem_private> I<$problem>, I<$private>
+
+Sets a problem's private flag.
+
+=item B<problem_generator> I<$problem>
+
+Returns a problem's generator. The generators are File, Run and Undef. More might be added in the future.
+
+=item B<set_problem_generator> I<$problem>, I<$generator>
+
+Sets a problem's generator.
+
+=item B<problem_runner> I<$problem>
+
+Returns a problem's runner. The runners are File, Verifier and Interactive. More might be added in the future.
+
+=item B<set_problem_runner> I<$problem>, I<$runner>
+
+Sets a problem's runner.
+
+=item B<problem_judge> I<$problem>
+
+Returns a problem's judge. The judges are Absolute and Points. More might be added in the future.
+
+=item B<set_problem_judge> I<$problem>, I<$judge>
+
+Sets a problem's judge.
+
+=item B<problem_testcnt> I<$problem>
+
+Returns a problem's test count.
+
+=item B<set_problem_testcnt> I<$problem>, I<$testcnt>
+
+Sets a problem's test count.
+
+=item B<problem_timeout> I<$problem>
+
+Returns a problem's time limit, in seconds.
+
+=item B<set_problem_timeout> I<$problem>, I<$timeout>
+
+Sets a problem's time limit, in seconds.
+
+=item B<problem_olimit> I<$problem>
+
+Returns a problem's output limit, in bytes.
+
+=item B<set_problem_olimit> I<$problem>, I<$olimit>
+
+Sets a problem's output limit, in bytes.
 
 =item B<get_open> I<$problem>, I<$user>
 
@@ -414,6 +478,14 @@ Returns a user's email address.
 =item B<set_user_email> I<$user>, I<$email>
 
 Sets a user's email address.
+
+=item B<user_lastjob> I<$user>
+
+Returns the time (seconds since epoch) when the user last submitted a solution.
+
+=item B<set_user_lastjob> I<$user>, I<$lastjob>
+
+Sets the time (seconds since epoch) when the user last submitted a solution.
 
 =item B<user_town> I<$user>
 

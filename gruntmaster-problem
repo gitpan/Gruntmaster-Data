@@ -2,7 +2,6 @@
 use v5.14;
 
 use Gruntmaster::Data;
-use Gruntmaster::Page::Submit;
 
 use IO::Prompter [ -style => 'bold', '-stdio', '-verbatim' ];
 use File::Slurp qw/read_file/;
@@ -21,50 +20,54 @@ sub prompt_file{
 	my ($meta, $name, $prefix) = @_;
 	my $filename = prompt '$prefix filename', -complete => 'filenames';
 	$meta->{files}{$name}{content} = read_file $filename;
-	$meta->{files}{$name}{format} = prompt '$prefix format', -menu => Gruntmaster::Page::Submit::FORMATS;
+	$meta->{files}{$name}{format} = prompt '$prefix format', -menu => [qw/C CPP MONO JAVA PASCAL PERL PYTHON/];
 	$meta->{files}{$name}{name} = prompt "$prefix filename [$filename]", -default => $filename;
 }
 
 sub cmd_add{
 	my $id = shift;
 	my $name = prompt 'Problem name';
+	my $private = prompt('Private?', '-yn') eq 'y';
 	my $author = prompt 'Problem author (full name)';
 	my $owner = prompt 'Problem owner (username)';
 	my $level = prompt 'Problem level', -menu => "beginner\neasy\nmedium\nhard";
 	my $statement = read_file prompt 'File with problem statement', -complete => 'filenames';
 	my %meta;
-	$meta{generator} = prompt 'Generator', -menu => "File\nRun\nUndef";
-	$meta{runner} = prompt 'Runner', -menu => "File\nVerifier\nInteractive";
-	$meta{judge} = prompt 'Judge', -menu => "Absolute\nPoints";
-	$meta{testcnt} = prompt 'Test count', '-i';
+	my $generator = prompt 'Generator', -menu => "File\nRun\nUndef";
+	my $runner = prompt 'Runner', -menu => "File\nVerifier\nInteractive";
+	my $judge = prompt 'Judge', -menu => "Absolute\nPoints";
+	my $testcnt = prompt 'Test count', '-i';
 
-	$meta{timeout} = prompt 'Time limit (seconds)', '-n';
-	delete $meta{timeout} unless $meta{timeout};
-	$meta{olimit} = prompt 'Output limit (bytes)', '-i';
-	delete $meta{olimit} unless $meta{olimit};
+	my $timeout = prompt 'Time limit (seconds)', '-n';
+	my $olimit = prompt 'Output limit (bytes)', '-i';
 	say 'Memory limits are broken, so I won\'t ask you for one';
 
-	if ($meta{generator} eq 'File') {
-		my $prefix = prompt '[Generator::File] Input file prefix';
-		$meta{infile}[$_ - 1] = read_file "$prefix$_.in" for 1 .. $meta{testcnt};
+	prompt_file \%meta, gen => '[Generator::Run] Generator' if $generator eq 'Run';
+
+	if ($runner eq 'File') {
+		$meta{tests}[$_ - 1] = prompt "[Runner::File] Score for test ${_} [10]", '-i', -default => 10 for 1 .. $testcnt;
 	}
 
-	prompt_file \%meta, gen => '[Generator::Run] Generator' if $meta{generator} eq 'Run';
+	prompt_file \%meta, ver => '[Runner::Verifier] Verifier' if $runner eq 'Verifier';
 
-	if ($meta{runner} eq 'File') {
-		my $prefix = prompt '[Runner::File] Output file prefix';
-		$meta{okfile}[$_ - 1] = read_file "$prefix$_.ok" for 1 .. $meta{testcnt};
-		$meta{tests}[$_ - 1] = prompt "[Runner::File] Score for test ${_} [10]", '-i', -default => 10 for 1 .. $meta{testcnt};
-	}
-
-	prompt_file \%meta, ver => '[Runner::Verifier] Verifier' if $meta{runner} eq 'Verifier';
-
-	if ($meta{runner} eq 'Interactive') {
+	if ($runner eq 'Interactive') {
 		say RED, 'WARNING: Runner::Interactive is experimental', RESET;
-		prompt_file int => '[Runner::Interactive] Interactive verifier';
+		prompt_file \%meta, int => '[Runner::Interactive] Interactive verifier';
 	}
 
-	insert_problem $id => name => $name, level => $level, statement => $statement, author => $author, owner => $owner;
+	insert_problem $id => (
+		name => $name,
+		level => $level,
+		statement => $statement,
+		author => $author,
+		owner => $owner,
+		generator => $generator,
+		runner => $runner,
+		judge => $judge,
+		testcnt => $testcnt,
+		($private ? (private => $private) : ()),
+		(defined $timeout ? (timeout => $timeout) : ()),
+		(defined $olimit ? (olimit => $olimit) : ()));
 	set_problem_meta $id => \%meta;
 	PUBLISH genpage => $contest ? "ct/$contest/pb/index.html" : 'pb/index.html';
 	PUBLISH genpage => $contest ? "ct/$contest/pb/$id.html" : "pb/$id.html";

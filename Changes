@@ -1,5 +1,10 @@
 Revision history for Perl extension Gruntmaster::Data.
 
+5999.000_002 2014-02-28T18:07
+ - Move most problem attributes outside problem_meta
+ - Add the HGETALL Redis command
+ - Add functions for getting/setting the last submit time of a user.
+
 5999.000_001 2014-02-02T01:01
  - Initial release
 
