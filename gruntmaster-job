@@ -4,47 +4,53 @@ use v5.14;
 use Gruntmaster::Data;
 
 use IO::Prompter [ -style => 'bold', '-stdio', '-verbatim' ];
-use File::Slurp qw/read_file/;
-use Getopt::Long;
-use Term::ANSIColor qw/RED RESET/;
 use POSIX qw/strftime/;
 
 ##################################################
 
-my $contest;
+my $dsn = $ENV{GRUNTMASTER_DSN} // 'dbi:Pg:';
+my $db = Gruntmaster::Data->connect($dsn);
 
 sub cmd_help{
 	exec perldoc => $0
 }
 
-sub cmd_card{
-	say jobcard;
+sub cmd_show{
+	my %columns = $db->job(shift)->get_columns;
+	$columns{date} = strftime '%c', localtime $columns{date};
+	$columns{private} = $columns{private} ? 'yes' : 'no';
+
+	print <<END
+Date: $columns{date}
+Owner: $columns{owner}
+Problem: $columns{problem}
+Format: $columns{format}
+Daemon: $columns{daemon}
+Result text: $columns{result_text}
+Private: $columns{private}
+END
 }
 
-sub cmd_show{
-	local $_ = shift or goto &cmd_list;
-	say "Date: " , strftime ('%c', localtime job_date);
-	say "User: ", job_user;
-	say "Problem: ", problem_name job_problem;
-	say "Extension: ", job_extension;
-	say "Size: ", sprintf "%.2fKB", job_filesize() / 1024;
-	say "Private: ", (job_private() ? 'yes' : 'no');
-	say "Result text: ", job_result_text;
-	say "Daemon: ", job_daemon;
-	say "Compile errors: ", job_errors;
+sub cmd_rm{
+	$db->job(shift)->delete
+}
+
+sub cmd_get{
+	my ($id, $col) = @_;
+	say $db->job($id)->get_column($col)
+}
+
+sub cmd_set{
+	my ($id, %values) = @_;
+	$db->job($id)->update(\%values)
 }
 
 sub cmd_rerun{
-	local $_ = shift or goto &cmd_list;
-	clean_job;
-	$contest//='';
-	PUBLISH jobs => "$contest.$_";
+	$db->job(shift)->rerun
 }
 
 ##################################################
 
-GetOptions ( 'contest=s' => \$contest );
-local $Gruntmaster::Data::contest = $contest;
 my $cmd = 'cmd_' . shift;
 cmd_help unless exists $main::{$cmd};
 no strict 'refs';
@@ -61,25 +67,33 @@ gruntmaster-job - shell interface to Gruntmaster 6000 job log
 
 =head1 SYNOPSIS
 
-  gruntmaster-job [--contest=mycontest] card
-  gruntmaster-job [--contest=mycontest] show 5
-  gruntmaster-job [--contest=mycontest] rerun 7
+  gruntmaster-job show id
+  gruntmaster-job rm id
+  gruntmaster-job get id key
+  gruntmaster-job set id key value
+  gruntmaster-job rerun id
 
 =head1 DESCRIPTION
 
 gruntmaster-job is a tool for managing jobs.
 
-Select the contest with the optional argument I<--contest>.
-
 =over
-
-=item B<card>
-
-Prints the number of jobs in the selected contest.
 
 =item B<show> I<id>
 
 Prints detailed information about the job with id I<id>.
+
+=item B<rm> I<id>
+
+Removes the job with id I<id>.
+
+=item B<set> I<id> I<key> I<value>
+
+Sets the I<key> configuration option of job I<id> to I<value>.
+
+=item B<get> I<id> I<key>
+
+Get the value of the I<key> configuration option of job I<id>.
 
 =item B<rerun> I<id>
 
@@ -95,10 +109,9 @@ Marius Gavrilescu E<lt>marius@ieval.roE<gt>
 
 Copyright (C) 2014 by Marius Gavrilescu
 
-This library is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself, either Perl version 5.18.1 or,
+at your option, any later version of Perl 5 you may have available.
 
 
 =cut

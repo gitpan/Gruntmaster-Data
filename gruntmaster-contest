@@ -9,21 +9,27 @@ use Date::Parse qw/str2time/;
 
 ##################################################
 
+my $dsn = $ENV{GRUNTMASTER_DSN} // 'dbi:Pg:';
+my $db = Gruntmaster::Data->connect($dsn);
+
 sub cmd_help{
 	exec perldoc => $0
 }
 
 sub cmd_list{
 	local $, = "\n";
-	say contests;
+	say map { $_->id } $db->contests->all;
 }
 
 sub cmd_show{
-	local $_ = shift or goto &cmd_list;
-	say "Name: ", contest_name;
-	say "Owner: ", contest_owner;
-	say "Start: ", strftime '%c', localtime contest_start;
-	say "End: ", strftime '%c', localtime contest_end;
+	my %columns = $db->contest(shift)->get_columns;
+	$columns{$_} = strftime '%c', localtime $columns{$_} for qw/start stop/;
+	print <<END
+Name: $columns{name}
+Owner: $columns{owner}
+Start: $columns{start}
+Stop: $columns{stop}
+END
 }
 
 sub cmd_add{
@@ -31,16 +37,23 @@ sub cmd_add{
 	my $name = prompt 'Contest name';
 	my $owner = prompt 'Owner';
 	my $start = str2time prompt 'Start time' or die 'Cannot parse time';
-	my $end = str2time prompt 'End time' or die 'Cannot parse time';
+	my $stop = str2time prompt 'Stop time' or die 'Cannot parse time';
 
-	insert_contest $id => name => $name, owner => $owner, start => $start, end => $end;
-	PUBLISH genpage => "ct/$id/index.html";
-	PUBLISH genpage => "ct/index.html";
+	$db->contests->create({id => $id, name => $name, owner => $owner, start => $start, stop => $stop})
 }
 
 sub cmd_rm{
-	remove_contest shift;
-	PUBLISH genpage => "ct/index.html";
+	$db->contest(shift)->delete
+}
+
+sub cmd_get{
+	my ($id, $col) = @_;
+	say $db->contest($id)->get_column($col)
+}
+
+sub cmd_set{
+	my ($id, %values) = @_;
+	$db->contest($id)->update(\%values)
 }
 
 ##################################################
@@ -65,6 +78,8 @@ gruntmaster-contest - shell interface to Gruntmaster 6000 contests
   gruntmaster-contest show id
   gruntmaster-contest add id
   gruntmaster-contest rm id
+  gruntmaster-contest get id key
+  gruntmaster-contest set id key value
 
 =head1 DESCRIPTION
 
@@ -86,7 +101,15 @@ Adds a new contest with id I<id>.
 
 =item B<rm> I<id>
 
-Removes the contest with id I<id>
+Removes the contest with id I<id>.
+
+=item B<set> I<id> I<key> I<value>
+
+Sets the I<key> configuration option of contest I<id> to I<value>.
+
+=item B<get> I<id> I<key>
+
+Get the value of the I<key> configuration option of contest I<id>.
 
 =back
 
@@ -98,10 +121,9 @@ Marius Gavrilescu E<lt>marius@ieval.roE<gt>
 
 Copyright (C) 2014 by Marius Gavrilescu
 
-This library is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself, either Perl version 5.18.1 or,
+at your option, any later version of Perl 5 you may have available.
 
 
 =cut

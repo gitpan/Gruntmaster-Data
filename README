@@ -1,9 +1,10 @@
-Gruntmaster-Data version 5999.000_001
+Gruntmaster-Data version 5999.000_003
 =====================================
 
-Gruntmaster-Data contains the Gruntmaster::Data module and associated tools.
+This distribution contains:
 
-Gruntmaster::Data is the Redis interface used by the Gruntmaster 6000 Online Judge.
+* Gruntmaster::Data, the DBIx::Class database schema used by the Gruntmaster 6000 Online Judge.
+* Several command-line tools for viewing and editing the database.
 
 INSTALLATION
 
@@ -19,18 +20,17 @@ DEPENDENCIES
 This module requires these other modules and libraries:
 
 * Date::Parse
+* DBIx::Class
 * File::Slurp
 * IO::Prompter
+* Lingua::EN::Inflect
 * JSON
-* Redis
 * Sub::Name
-* Term::ANSIColor
 
 COPYRIGHT AND LICENCE
 
 Copyright (C) 2014 by Marius Gavrilescu
 
-This library is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself, either Perl version 5.18.1 or,
+at your option, any later version of Perl 5 you may have available.

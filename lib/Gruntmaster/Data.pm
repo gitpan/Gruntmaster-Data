@@ -1,17 +1,24 @@
+use utf8;
 package Gruntmaster::Data;
-use v5.14;
+
+# Created by DBIx::Class::Schema::Loader
+# DO NOT MODIFY THE FIRST PART OF THIS FILE
+
+use strict;
 use warnings;
-use parent qw/Exporter/;
 
-use JSON qw/encode_json decode_json/;
-use Redis;
+use base 'DBIx::Class::Schema';
+
+__PACKAGE__->load_namespaces;
+
+
+# Created by DBIx::Class::Schema::Loader v0.07039 @ 2014-03-05 13:11:39
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:dAEmtAexvUaNXLgYz2rNEg
+
+our $VERSION = 5999.000_003;
+
+use Lingua::EN::Inflect qw/PL_N/;
 use Sub::Name qw/subname/;
-
-our $VERSION = '5999.000_002';
-
-our $contest;
-my $redis = Redis->new;
-my $pubsub = Redis->new;
 
 sub dynsub{
 	our ($name, $sub) = @_;
@@ -20,86 +27,16 @@ sub dynsub{
 }
 
 BEGIN {
-	for my $cmd (qw/multi exec smembers get hget hgetall hdel hset sadd srem incr hmset hsetnx publish del/) {
-		dynsub uc $cmd, sub { $redis->$cmd(@_) };
+	for my $rs (qw/contest contest_problem job open problem user/) {
+		my $rsname = ucfirst $rs;
+		$rsname =~ s/_([a-z])/\u$1/g;
+		dynsub PL_N($rs) => sub { $_[0]->resultset($rsname)              };
+		dynsub      $rs  => sub { $_[0]->resultset($rsname)->find($_[1]) };
 	}
-
-	for my $cmd (qw/subscribe wait_for_messages/) {
-		dynsub uc $cmd, sub { $pubsub->$cmd(@_) };
-	}
 }
-
-sub cp { defined $contest ? "contest.$contest." : '' }
-
-sub problems			()		{ SMEMBERS cp . 'problem' }
-sub contests			()		{ SMEMBERS cp . 'contest' }
-sub users				()		{ SMEMBERS cp . 'user' }
-sub jobcard				()		{ GET cp . 'job' }
-
-sub job_results			(_)		{ decode_json HGET cp . "job.$_[0]", 'results' }
-sub set_job_results		($+)	{ HSET cp . "job.$_[0]", 'results', encode_json $_[1] }
-sub job_inmeta			(_)		{ decode_json HGET cp . "job.$_[0]", 'inmeta' }
-sub set_job_inmeta		($+)	{ HSET cp . "job.$_[0]", 'inmeta', encode_json $_[1] }
-sub problem_meta		(_)		{ decode_json HGET cp . "problem.$_[0]", 'meta' }
-sub set_problem_meta	($+)	{ HSET cp . "problem.$_[0]", 'meta', encode_json $_[1] }
-sub job_daemon			(_)		{ HGET cp . "job.$_[0]", 'daemon' }
-sub set_job_daemon		($$)	{ HSETNX cp . "job.$_[0]", 'daemon', $_[1] };
-
-sub defhash{
-	my ($name, @keys) = @_;
-	for my $key (@keys) {
-		dynsub "${name}_$key", sub (_)  { HGET cp . "$name.$_[0]", $key };
-		dynsub "set_${name}_$key", sub ($$) { HSET cp . "$name.$_[0]", $key, $_[1] };
-	}
-
-	dynsub "edit_$name", sub {
-		my ($key, %values) = @_;
-		HMSET cp . "$name.$key", %values;
-	};
-
-	dynsub "insert_$name", sub {
-		my ($key, %values) = @_;
-		SADD cp . $name, $key or return;
-		HMSET cp . "$name.$key", %values;
-	};
-	dynsub "remove_$name", sub (_) {
-		my $key = shift;
-		SREM cp . $name, $key;
-		DEL cp . "$name.$key";
-	};
-
-	dynsub "push_$name", sub {
-		my $nr = INCR cp . $name;
-		HMSET cp . "$name.$nr", @_;
-		$nr
-	};
-}
-
-defhash problem => qw/name level difficulty statement owner author private generator runner judge testcnt timeout olimit/;
-defhash contest => qw/start end name owner/;
-defhash job => qw/date errors extension filesize private problem result result_text user/;
-defhash user => qw/name email lastjob town university level/;
-
-sub clean_job (_){
-	HDEL cp . "job.$_[0]", qw/result result_text results daemon/
-}
-
-sub mark_open {
-	my ($problem, $user) = @_;
-	HSETNX cp . 'open', "$problem.$user", time;
-}
-
-sub get_open {
-	my ($problem, $user) = @_;
-	HGET cp . 'open', "$problem.$user";
-}
-
-our @EXPORT = do {
-	no strict 'refs';
-	grep { $_ =~ /^[a-zA-Z]/ and exists &$_ } keys %{__PACKAGE__ . '::'};
-};
 
 1;
+
 __END__
 
 =encoding utf-8
@@ -110,418 +47,75 @@ Gruntmaster::Data - Gruntmaster 6000 Online Judge -- database interface and tool
 
 =head1 SYNOPSIS
 
-  for my $problem (problems) {
-    say "Problem name: " . problem_name $problem;
-    say "Problem level: " . problem_level $problem;
-    ...
-  }
+  my $db = Gruntmaster::Data->connect('dbi:Pg:');
+
+  my $problem = $db->problem('my_problem');
+  $problem->update({timeout => 2.5}); # Set time limit to 2.5 seconds
+  $problem->rerun; # And rerun all jobs for this problem
+
+  # ...
+
+  my $contest = $db->contests->create({ # Create a new contest
+    id => 'my_contest',
+    name => 'My Awesome Contest',
+    start => time + 100,
+    end => time + 1900,
+  });
+  $db->contest_problems->create({ # Add a problem to the contest
+    contest => 'my_contest',
+    problem => 'my_problem',
+  });
+
+  say 'The contest has not started yet' if $contest->is_pending;
+
+  # ...
+
+  my @jobs = $db->jobs->search({contest => 'my_contest', owner => 'MGV'})->all;
+  $_->rerun for @jobs; # Rerun all jobs sent by MGV in my_contest
 
 =head1 DESCRIPTION
 
-Gruntmaster::Data is the Redis interface used by the Gruntmaster 6000 Online Judge. It exports many functions for talking to the database. All functions are exported by default.
+Gruntmaster::Data is the interface to the Gruntmaster 6000 database. Read the L<DBIx::Class> documentation for usage information.
 
-The current contest is selected by setting the C<< $Gruntmaster::Data::contest >> variable.
-
-  local $Gruntmaster::Data::contest = 'mycontest';
-  say 'There are' . jobcard . ' jobs in my contest';
-
-=head1 FUNCTIONS
-
-=head2 Redis
-
-Gruntmaster::Data exports some functions for talking directly to the Redis server. These functions should not normally be used, except for B<MULTI>, B<EXEC>, B<PUBLISH>, B<SUBSCRIBE> and B<WAIT_FOR_MESSAGES>.
-
-These functions correspond to Redis commands. The current list is: B<< MULTI EXEC SMEMBERS GET HGET HGETALL HDEL HSET SADD SREM INCR HMSET HSETNX DEL PUBLISH SUBSCRIBE WAIT_FOR_MESSAGES >>.
-
-=head2 Problems
+In addition to the typical DBIx::Class::Schema methods, this module contains several convenience methods:
 
 =over
 
-=item B<problems>
+=item contests
 
-Returns a list of problems in the current contest.
+Equivalent to C<< $schema->resultset('Contest') >>
 
-=item B<problem_meta> I<$problem>
+=item contest_problems
 
-Returns a problem's meta.
+Equivalent to C<< $schema->resultset('ContestProblem') >>
 
-=item B<set_problem_meta> I<$problem>, I<$meta>
+=item jobs
 
-Sets a problem's meta.
+Equivalent to C<< $schema->resultset('Job') >>
 
-=item B<problem_name> I<$problem>
+=item problems
 
-Returns a problem's name.
+Equivalent to C<< $schema->resultset('Problem') >>
 
-=item B<set_problem_name> I<$problem>, I<$name>
+=item users
 
-Sets a problem's name.
+Equivalent to C<< $schema->resultset('User') >>
 
-=item B<problem_level> I<$problem>
+=item contest($id)
 
-Returns a problem's level. The levels are beginner, easy, medium, hard.
+Equivalent to C<< $schema->resultset('Contest')->find($id) >>
 
-=item B<set_problem_level> I<$problem>, I<$level>
+=item job($id)
 
-Sets a problem's level. The levels are beginner, easy, medium, hard.
+Equivalent to C<< $schema->resultset('Job')->find($id) >>
 
-=item B<problem_difficulty> I<$problem>
+=item problem($id)
 
-Returns a problem's difficulty.
+Equivalent to C<< $schema->resultset('Problem')->find($id) >>
 
-=item B<set_problem_difficulty> I<$problem>, I<$name>
+=item user($id)
 
-Sets a problem's difficulty.
-
-=item B<problem_statement> I<$problem>
-
-Returns a problem's statement.
-
-=item B<set_problem_statement> I<$problem>, I<$statement>
-
-Sets a problem's statement.
-
-=item B<problem_owner> I<$problem>
-
-Returns a problem's owner.
-
-=item B<set_problem_owner> I<$problem>, I<$owner>
-
-Sets a problem's owner.
-
-=item B<problem_author> I<$problem>
-
-Returns a problem's author.
-
-=item B<set_problem_author> I<$problem>, I<$author>
-
-Sets a problem's author.
-
-=item B<problem_private> I<$problem>
-
-Returns a problem's private flag (true if the problem is private, false otherwise).
-
-=item B<set_problem_private> I<$problem>, I<$private>
-
-Sets a problem's private flag.
-
-=item B<problem_generator> I<$problem>
-
-Returns a problem's generator. The generators are File, Run and Undef. More might be added in the future.
-
-=item B<set_problem_generator> I<$problem>, I<$generator>
-
-Sets a problem's generator.
-
-=item B<problem_runner> I<$problem>
-
-Returns a problem's runner. The runners are File, Verifier and Interactive. More might be added in the future.
-
-=item B<set_problem_runner> I<$problem>, I<$runner>
-
-Sets a problem's runner.
-
-=item B<problem_judge> I<$problem>
-
-Returns a problem's judge. The judges are Absolute and Points. More might be added in the future.
-
-=item B<set_problem_judge> I<$problem>, I<$judge>
-
-Sets a problem's judge.
-
-=item B<problem_testcnt> I<$problem>
-
-Returns a problem's test count.
-
-=item B<set_problem_testcnt> I<$problem>, I<$testcnt>
-
-Sets a problem's test count.
-
-=item B<problem_timeout> I<$problem>
-
-Returns a problem's time limit, in seconds.
-
-=item B<set_problem_timeout> I<$problem>, I<$timeout>
-
-Sets a problem's time limit, in seconds.
-
-=item B<problem_olimit> I<$problem>
-
-Returns a problem's output limit, in bytes.
-
-=item B<set_problem_olimit> I<$problem>, I<$olimit>
-
-Sets a problem's output limit, in bytes.
-
-=item B<get_open> I<$problem>, I<$user>
-
-Returns the time when I<$user> opened I<$problem>.
-
-=item B<mark_open> I<$problem>, I<$user>
-
-Sets the time when I<$user> opened I<$problem> to the current time. Does nothing if I<$user> has already opened I<$problem>.
-
-=item B<insert_problem> I<$id>, I<$key> => I<$value>, ...
-
-Inserts a problem with id I<$id> and the given initial configuration. Does nothing if a problem with id I<$id> already exists. Returns true if the problem was added, false otherwise.
-
-=item B<edit_problem> I<$id>, I<$key> => I<$value>, ...
-
-Updates the configuration of a problem. The values of the given keys are updated. All other keys/values are left intact.
-
-=item B<remove_problem> I<$id>
-
-Removes a problem.
-
-=back
-
-=head2 Contests
-
-B<<< WARNING: these functions only work correctly when C<< $Gruntmaster::Data::contest >> is undef >>>
-
-=over
-
-=item B<contests>
-
-Returns a list of contests.
-
-=item B<contest_start> I<$contest>
-
-Returns a contest's start time.
-
-=item B<set_contest_start> I<$contest>, I<$start>
-
-Sets a contest's start time.
-
-=item B<contest_end> I<$contest>
-
-Returns a contest's end time.
-
-=item B<set_contest_end> I<$contest>, I<$end>
-
-Sets a contest's end time.
-
-=item B<contest_name> I<$contest>
-
-Returns a contest's name.
-
-=item B<set_contest_name> I<$contest>, I<$name>
-
-Sets a contest's name.
-
-=item B<contest_owner> I<$contest>
-
-Returns a contest's owner.
-
-=item B<set_contest_owner> I<$contest>, I<$owner>
-
-Sets a contest's owner.
-
-=item B<insert_contest> I<$id>, I<$key> => I<$value>, ...
-
-Inserts a contest with id I<$id> and the given initial configuration. Does nothing if a contest with id I<$id> already exists. Returns true if the contest was added, false otherwise.
-
-=item B<edit_contest> I<$id>, I<$key> => I<$value>, ...
-
-Updates the configuration of a contest. The values of the given keys are updated. All other keys/values are left intact.
-
-=item B<remove_contest> I<$id>
-
-Removes a contest.
-
-=back
-
-=head2 Jobs
-
-=over
-
-=item B<jobcard>
-
-Returns the number of jobs in the database.
-
-=item B<job_results> I<$job>
-
-Returns an array of job results. Each element corresponds to a test and is a hashref with keys B<id> (test number), B<result> (result code, see L<Gruntmaster::Daemon::Constants>), B<result_text> (result description) and B<time> (time taken).
-
-=item B<set_job_results> I<$job>, I<$results>
-
-Sets a job's results.
-
-=item B<job_inmeta> I<$job>
-
-Returns a job's meta.
-
-=item B<set_job_inmeta> I<$job>, I<$meta>
-
-Sets a job's meta.
-
-=item B<job_daemon> I<$job>
-
-Returns the hostname:pid of the daemon which ran this job.
-
-=item B<set_job_daemon> I<$job>, I<$hostname_and_pid>
-
-If the job has no associated daemon, it sets the daemon and returns true. Otherwise it returns false without setting the daemon.
-
-=item B<job_date> I<$job>
-
-Returns a job's submit date.
-
-=item B<set_job_date> I<$job>, I<$date>
-
-Sets a job's submit date.
-
-=item B<job_errors> I<$job>
-
-Returns a job's compile errors.
-
-=item B<set_job_errors> I<$job>, I<$errors>
-
-Sets a job's compile errors.
-
-=item B<job_extension> I<$job>
-
-Returns a job's file name extension (e.g. "cpp", "pl", "java").
-
-=item B<set_job_extension> I<$job>, I<$extension>
-
-Sets a job's file name extension.
-
-=item B<job_filesize> I<$job>
-
-Returns a job's source file size, in bytes.
-
-=item B<set_job_filesize> I<$job>, I<$filesize>
-
-Sets a job's source file size, in bytes.
-
-=item B<job_private> I<$job>
-
-Returns the value of a job's private flag.
-
-=item B<set_job_private> I<$job>, I<$private>
-
-Sets the value of a job's private flag.
-
-=item B<job_problem> I<$job>
-
-Returns a job's problem.
-
-=item B<set_job_problem> I<$job>, I<$problem>
-
-Sets a job's problem.
-
-=item B<job_result> I<$job>
-
-Returns a job's result code. Possible result codes are described in L<Gruntmaster::Daemon::Constants>
-
-=item B<set_job_result> I<$job>, I<$result>
-
-Sets a job's result code.
-
-=item B<job_result_text> I<$job>
-
-Returns a job's result text.
-
-=item B<set_job_result_text> I<$job>, I<$result_text>
-
-Sets a job's result text.
-
-=item B<job_user> I<$job>
-
-Returns the user who submitted a job.
-
-=item B<set_job_user> I<$job>, I<$user>
-
-Sets the suer who submitted a job.
-
-=item B<clean_job> I<$job>
-
-Removes a job's daemon, result code, result text and result array.
-
-=item B<push_job> I<$key> => I<$value>, ...
-
-Inserts a job with a given initial configuration. Returns the id of the newly-added job.
-
-=item B<edit_job> I<$id>, I<$key> => I<$value>, ...
-
-Updates the configuration of a job. The values of the given keys are updated. All other keys/values are left intact.
-
-=item B<remove_job> I<$id>
-
-Removes a job.
-
-=back
-
-=head2 Users
-
-B<<< WARNING: these functions only work correctly when C<< $Gruntmaster::Data::contest >> is undef >>>
-
-=over
-
-=item B<users>
-
-Returns a list of users.
-
-=item B<user_name> I<$user>
-
-Returns a user's full name.
-
-=item B<set_user_name> I<$user>, I<$name>
-
-Sets a user's full name.
-
-=item B<user_email> I<$user>
-
-Returns a user's email address.
-
-=item B<set_user_email> I<$user>, I<$email>
-
-Sets a user's email address.
-
-=item B<user_lastjob> I<$user>
-
-Returns the time (seconds since epoch) when the user last submitted a solution.
-
-=item B<set_user_lastjob> I<$user>, I<$lastjob>
-
-Sets the time (seconds since epoch) when the user last submitted a solution.
-
-=item B<user_town> I<$user>
-
-Returns a user's town.
-
-=item B<set_user_town> I<$user>, I<$town>
-
-Sets a user's town.
-
-=item B<user_university> I<$user>
-
-Returns a user's university/highschool/place of work/etc.
-
-=item B<set_user_university> I<$user>, I<$university>
-
-Sets a user's university, highschool/place of work/etc.
-
-=item B<user_level> I<$user>
-
-Returns a user's current level of study. One of 'Highschool', 'Undergraduate', 'Master', 'Doctorate' or 'Other'.
-
-=item B<set_user_level> I<$user>, I<$level>
-
-Sets a user's current level of study.
-
-=item B<insert_user> I<$id>, I<$key> => I<$value>, ...
-
-Inserts a user with id I<$id> and the given initial configuration. Does nothing if a user with id I<$id> already exists. Returns true if the user was added, false otherwise.
-
-=item B<edit_user> I<$id>, I<$key> => I<$value>, ...
-
-Updates the configuration of a user. The values of the given keys are updated. All other keys/values are left intact.
-
-=item B<remove_user> I<$id>
-
-Removes a user.
+Equivalent to C<< $schema->resultset('User')->find($id) >>
 
 =back
 
@@ -533,10 +127,9 @@ Marius Gavrilescu E<lt>marius@ieval.roE<gt>
 
 Copyright (C) 2014 by Marius Gavrilescu
 
-This library is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself, either Perl version 5.18.1 or,
+at your option, any later version of Perl 5 you may have available.
 
 
 =cut

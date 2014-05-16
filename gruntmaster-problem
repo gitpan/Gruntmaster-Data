@@ -5,34 +5,29 @@ use Gruntmaster::Data;
 
 use IO::Prompter [ -style => 'bold', '-stdio', '-verbatim' ];
 use File::Slurp qw/read_file/;
+use JSON qw/encode_json/;
 use Term::ANSIColor qw/RED RESET/;
 use Getopt::Long qw/:config require_order/;
 
 ##################################################
 
-my $contest;
+my $dsn = $ENV{GRUNTMASTER_DSN} // 'dbi:Pg:';
+my $db = Gruntmaster::Data->connect($dsn);
 
 sub cmd_help{
 	exec perldoc => $0
-}
-
-sub prompt_file{
-	my ($meta, $name, $prefix) = @_;
-	my $filename = prompt '$prefix filename', -complete => 'filenames';
-	$meta->{files}{$name}{content} = read_file $filename;
-	$meta->{files}{$name}{format} = prompt '$prefix format', -menu => [qw/C CPP MONO JAVA PASCAL PERL PYTHON/];
-	$meta->{files}{$name}{name} = prompt "$prefix filename [$filename]", -default => $filename;
 }
 
 sub cmd_add{
 	my $id = shift;
 	my $name = prompt 'Problem name';
 	my $private = prompt('Private?', '-yn') eq 'y';
+	my $contest = prompt 'Contest';
 	my $author = prompt 'Problem author (full name)';
+	my $writer = prompt 'Problem statement writer (full name)';
 	my $owner = prompt 'Problem owner (username)';
 	my $level = prompt 'Problem level', -menu => "beginner\neasy\nmedium\nhard";
 	my $statement = read_file prompt 'File with problem statement', -complete => 'filenames';
-	my %meta;
 	my $generator = prompt 'Generator', -menu => "File\nRun\nUndef";
 	my $runner = prompt 'Runner', -menu => "File\nVerifier\nInteractive";
 	my $judge = prompt 'Judge', -menu => "Absolute\nPoints";
@@ -42,69 +37,96 @@ sub cmd_add{
 	my $olimit = prompt 'Output limit (bytes)', '-i';
 	say 'Memory limits are broken, so I won\'t ask you for one';
 
-	prompt_file \%meta, gen => '[Generator::Run] Generator' if $generator eq 'Run';
+	my (@tests, $gensource, $genformat, $versource, $verformat);
+
+	if ($generator eq 'Run') {
+		$gensource = read_file prompt, '[Generator::Run] Generator file name', -complete => 'filenames';
+		$genformat = prompt '[Generator::Run] Generator format', -menu => [qw/C CPP MONO JAVA PASCAL PERL PYTHON/];
+	}
 
 	if ($runner eq 'File') {
-		$meta{tests}[$_ - 1] = prompt "[Runner::File] Score for test ${_} [10]", '-i', -default => 10 for 1 .. $testcnt;
+		my $default = $judge eq 'Points' ? 10 : 'Ok';
+		$tests[$_ - 1] = prompt "[Runner::File] Score for test ${_} [$default]", -default => $default for 1 .. $testcnt;
 	}
 
-	prompt_file \%meta, ver => '[Runner::Verifier] Verifier' if $runner eq 'Verifier';
-
-	if ($runner eq 'Interactive') {
-		say RED, 'WARNING: Runner::Interactive is experimental', RESET;
-		prompt_file \%meta, int => '[Runner::Interactive] Interactive verifier';
+	if ($runner eq 'Verifier' || $runner eq 'Interactive') {
+		say RED, 'WARNING: Runner::Interactive is experimental', RESET if $runner eq 'Interactive';
+		$versource = prompt "[Runner::$runner] Verifier file name", -complete => 'filenames';
+		$verformat = prompt "[Runner::$runner] Verifier format", -menu => [qw/C CPP MONO JAVA PASCAL PERL PYTHON/];
 	}
 
-	insert_problem $id => (
+	my %options = (
+		id => $id,
 		name => $name,
 		level => $level,
 		statement => $statement,
 		author => $author,
+		writer => $writer,
 		owner => $owner,
 		generator => $generator,
 		runner => $runner,
 		judge => $judge,
 		testcnt => $testcnt,
-		($private ? (private => $private) : ()),
-		(defined $timeout ? (timeout => $timeout) : ()),
-		(defined $olimit ? (olimit => $olimit) : ()));
-	set_problem_meta $id => \%meta;
-	PUBLISH genpage => $contest ? "ct/$contest/pb/index.html" : 'pb/index.html';
-	PUBLISH genpage => $contest ? "ct/$contest/pb/$id.html" : "pb/$id.html";
+	);
+	$options{private} = $private if $private;
+	$options{timeout} = $timeout if $timeout;
+	$options{olimit} = $olimit if $olimit;
+	$options{tests} = encode_json \@tests if @tests;
+	$options{gensource} = $gensource if $gensource;
+	$options{genformat} = $genformat if $genformat;
+	$options{versource} = $versource if $versource;
+	$options{verformat} = $verformat if $verformat;
+	$db->problems->create (\%options);
+
+	$db->contest_problems->create({problem => $id, contest => $contest}) if $contest;
 }
 
 sub cmd_set{
 	my $file;
 	GetOptions ( 'file!' => \$file );
-	my ($id, %values) = @ARGV;
+	my ($id, %values) = @_;
 	%values = map { $_ => scalar read_file $values{$_} } keys %values if $file;
-	edit_problem $id => %values;
-	PUBLISH genpage => 'pb/index.html';
-	PUBLISH genpage => "pb/$id.html";
+	$db->problem($id)->update(\%values)
+}
+
+sub cmd_get{
+	my ($id, $col) = @_;
+	say $db->problem($id)->get_column($col)
 }
 
 sub cmd_list{
 	local $, = "\n";
-	say problems;
+	say map {$_->id} $db->problems->all
 }
 
 sub cmd_rm{
-	remove_problem shift;
-	PUBLISH genpage => $contest ? "ct/$contest/pb/index.html" : 'pb/index.html';
+	$db->problem(shift)->delete
 }
 
 sub cmd_show{
-	local $_ = shift or goto &cmd_list;
+	my %columns = $db->problem(shift)->get_columns;
+	print <<END
+Name: $columns{name}
+Author: $columns{author}
+Statement written by: $columns{writer}
+Owner: $columns{owner}
+Level: $columns{level}
+Output limit: $columns{olimit}
+Time limit: $columns{timeout}
+Test count: $columns{testcnt}
+Generator: $columns{generator}
+Runner: $columns{runner}
+Judge: $columns{judge}
+Private: $columns{private}
+END
 }
 
 ##################################################
 
-GetOptions ( 'contest=s' => \$contest );
-local $Gruntmaster::Data::contest = $contest;
 my $cmd = 'cmd_' . shift;
 cmd_help unless exists $main::{$cmd};
 no strict 'refs';
-$cmd->(@ARGV) if exists $main::{$cmd};
+$cmd->(@ARGV);
 
 1;
 __END__
@@ -117,17 +139,16 @@ gruntmaster-problem - shell interface to Gruntmaster 6000 problems
 
 =head1 SYNOPSIS
 
-  gruntmaster-problem [--contest=mycontest] add problem_id
-  gruntmaster-problem [--contest=mycontest] list
-  gruntmaster-problem [--contest=mycontest] rm problem_id
-  gruntmaster-problem [--contest=mycontest] show problem_id
-  gruntmaster-problem [--contest=mycontest] set [--file] problem_id key value
+  gruntmaster-problem add problem_id
+  gruntmaster-problem list
+  gruntmaster-problem rm problem_id
+  gruntmaster-problem show problem_id
+  gruntmaster-problem set [--file] problem_id key value
+  gruntmaster-problem get problem_id key
 
 =head1 DESCRIPTION
 
 gruntmaster-problem is a tool for managing problems.
-
-Select the contest with the optional argument I<--contest>.
 
 =over
 
@@ -151,6 +172,10 @@ Removes the problem with id I<id>.
 
 Sets the I<key> configuration option of problem I<id> to I<value>.
 
+=item B<get> I<id> I<key>
+
+Get the value of the I<key> configuration option of problem I<id>
+
 =item B<set> --file I<id> I<key> I<file>
 
 Sets the I<key> configuration option of problem I<id> to the contents of the file I<file>.
@@ -165,10 +190,9 @@ Marius Gavrilescu E<lt>marius@ieval.roE<gt>
 
 Copyright (C) 2014 by Marius Gavrilescu
 
-This library is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself, either Perl version 5.18.1 or,
+at your option, any later version of Perl 5 you may have available.
 
 
 =cut

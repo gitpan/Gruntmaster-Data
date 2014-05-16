@@ -4,23 +4,28 @@ use ExtUtils::MakeMaker;
 WriteMakefile(
 	NAME              => 'Gruntmaster::Data',
 	VERSION_FROM      => 'lib/Gruntmaster/Data.pm',
-	EXE_FILES         => [ qw/gruntmaster-contest gruntmaster-problem gruntmaster-job/ ],
 	ABSTRACT_FROM     => 'lib/Gruntmaster/Data.pm',
 	AUTHOR            => 'Marius Gavrilescu <marius@ieval.ro>',
+	EXE_FILES         => [qw/gruntmaster-problem gruntmaster-contest gruntmaster-job/],
 	MIN_PERL_VERSION  => '5.14.0',
-	LICENSE           => 'AGPL_3',
+	LICENSE           => 'perl',
 	SIGN              => 1,
 	PREREQ_PM         => {
 		qw/Getopt::Long 0
 		   POSIX 0
+		   Term::ANSIColor 0
 
 		   Date::Parse 0
+		   DBIx::Class::Core 0
+		   DBIx::Class::Schema 0
 		   File::Slurp 0
 		   IO::Prompter 0
+		   Lingua::EN::Inflect 0
 		   JSON 0
-		   Redis 0
-		   Sub::Name 0
-		   Term::ANSIColor 0/,
+		   Sub::Name 0/,
+	},
+	BUILD_REQUIRES    => {
+		qw/DBD::SQLite 0/,
 	},
 	META_MERGE        => {
 		dynamic_config => 0,
