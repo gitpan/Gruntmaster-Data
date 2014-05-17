@@ -25,7 +25,8 @@ WriteMakefile(
 		   Sub::Name 0/,
 	},
 	BUILD_REQUIRES    => {
-		qw/DBD::SQLite 0/,
+		qw/DBD::SQLite 0
+		   SQL::Translator 0/,
 	},
 	META_MERGE        => {
 		dynamic_config => 0,

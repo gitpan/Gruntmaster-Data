@@ -4,7 +4,7 @@
       "Marius Gavrilescu <marius@ieval.ro>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "ExtUtils::MakeMaker version 6.66, CPAN::Meta::Converter version 2.141170",
+   "generated_by" : "ExtUtils::MakeMaker version 6.66, CPAN::Meta::Converter version 2.120921",
    "license" : [
       "perl_5"
    ],
@@ -22,7 +22,8 @@
    "prereqs" : {
       "build" : {
          "requires" : {
-            "DBD::SQLite" : "0"
+            "DBD::SQLite" : "0",
+            "SQL::Translator" : "0"
          }
       },
       "configure" : {
@@ -47,11 +48,11 @@
          }
       }
    },
-   "release_status" : "stable",
+   "release_status" : "testing",
    "resources" : {
       "repository" : {
          "url" : "https://git.ieval.ro/?p=gruntmaster-data.git"
       }
    },
-   "version" : "5999.000003"
+   "version" : "5999.000_004"
 }

@@ -1,5 +1,9 @@
 Revision history for Perl extension Gruntmaster::Data.
 
+5999.000_004 2014-05-17T10:52+03:00
+ - Build-Depend on SQL::Translator
+ - Fix version
+
 5999.000_003 2014-05-16T19:31+03:00
  - Use Postgres (via DBIx::Class) instead of Redis
  - Change license to perl
