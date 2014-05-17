@@ -16,8 +16,7 @@ WriteMakefile(
 		   Term::ANSIColor 0
 
 		   Date::Parse 0
-		   DBIx::Class::Core 0
-		   DBIx::Class::Schema 0
+		   DBIx::Class 0
 		   File::Slurp 0
 		   IO::Prompter 0
 		   Lingua::EN::Inflect 0
