@@ -3,9 +3,11 @@ use v5.14;
 
 use Test::More tests => 13;
 use File::Temp qw/tempdir/;
+use Config;
 
 use Gruntmaster::Data;
 
+my $perl = $Config{perlpath} . $Config{_exe};
 my $dir = tempdir CLEANUP => 1;
 $ENV{GRUNTMASTER_DSN} = "dbi:SQLite:dbname=$dir/testdb";
 
@@ -20,7 +22,7 @@ withdb { $db->deploy };
 
 my $pipe;
 
-open $pipe, '|./gruntmaster-contest add ct';
+open $pipe, '|$perl gruntmaster-contest add ct';
 print $pipe <<'';
 My cool contest
 MGV
@@ -41,20 +43,20 @@ withdb {
 	}
 };
 
-is `./gruntmaster-contest get ct owner`, "MGV\n", 'gruntmaster-contest get';
-system './gruntmaster-contest', 'set', 'ct', 'owner', 'nobody';
+is `$perl gruntmaster-contest get ct owner`, "MGV\n", 'gruntmaster-contest get';
+system $perl, 'gruntmaster-contest', 'set', 'ct', 'owner', 'nobody';
 withdb { is $db->contest('ct')->owner->id, 'nobody', 'gruntmaster-contest set' };
 
 withdb { $db->contests->create({id => 'dummy', name => 'Dummy contest', owner => 'MGV', start => 0, stop => 1}) };
-my @list = sort `./gruntmaster-contest list`;
+my @list = sort `$perl gruntmaster-contest list`;
 chomp @list;
 my @list2 = withdb { map { $_->id } $db->contests->all };
 is_deeply \@list, [ sort @list2 ], 'gruntmaster-contest list';
 
-system './gruntmaster-contest', 'rm', 'dummy';
+system $perl, 'gruntmaster-contest', 'rm', 'dummy';
 withdb { ok !$db->contest('dummy'), 'gruntmaster-contest rm' };
 
-open $pipe, '|./gruntmaster-problem add pb';
+open $pipe, '|$perl gruntmaster-problem add pb';
 print $pipe <<'';
 Test problem
 n
@@ -96,25 +98,25 @@ withdb {
 	}
 };
 
-is `./gruntmaster-problem get pb author`, "Marius Gavrilescu\n", 'gruntmaster-problem get';
-system './gruntmaster-problem set pb owner nobody';
+is `$perl gruntmaster-problem get pb author`, "Marius Gavrilescu\n", 'gruntmaster-problem get';
+system $perl, 'gruntmaster-problem', 'set', 'pb', 'owner', 'nobody';
 withdb { is $db->problem('pb')->owner->id, 'nobody', 'gruntmaster-problem set' };
 
 withdb { $db->problems->create({id => 'dummy', name => 'Dummy', generator => 'Undef', runner => 'File', judge => 'Absolute', level => 'beginner', owner => 'MGV', statement => '...', testcnt => 1, timeout => 1}) };
 
-@list = sort `./gruntmaster-problem list`;
+@list = sort `$perl gruntmaster-problem list`;
 chomp @list;
 @list2 = withdb { map { $_->id } $db->problems->all };
 is_deeply \@list, [ sort @list2 ], 'gruntmaster-problem list';
 
-system './gruntmaster-problem', 'rm', 'dummy';
+system $perl, 'gruntmaster-problem', 'rm', 'dummy';
 withdb { ok !$db->problem('dummy'), 'gruntmaster-problem rm' };
 
 withdb { $db->jobs->create({id => 1, date => 1, extension => '.ext', format => 'CPP', problem => 'pb', source => '...', owner => 'MGV'}) };
 
-is `./gruntmaster-job get 1 format`, "CPP\n", 'gruntmaster-job get';
-system './gruntmaster-job', 'set', 1, 'format', 'PERL';
+is `$perl gruntmaster-job get 1 format`, "CPP\n", 'gruntmaster-job get';
+system $perl, 'gruntmaster-job', 'set', 1, 'format', 'PERL';
 withdb { is $db->job(1)->format, 'PERL', 'gruntmaster-job set' };
 
-system './gruntmaster-job', 'rm', 1;
+system $perl, 'gruntmaster-job', 'rm', 1;
 withdb { ok !$db->job(1), 'gruntmaster-job rm' };
