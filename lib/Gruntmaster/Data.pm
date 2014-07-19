@@ -15,10 +15,15 @@ __PACKAGE__->load_namespaces;
 # Created by DBIx::Class::Schema::Loader v0.07039 @ 2014-03-05 13:11:39
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:dAEmtAexvUaNXLgYz2rNEg
 
-our $VERSION = '5999.000_006';
+our $VERSION = '5999.000_007';
 
 use Lingua::EN::Inflect qw/PL_N/;
+use JSON qw/decode_json/;
 use Sub::Name qw/subname/;
+
+use constant PROBLEM_PUBLIC_COLUMNS => [qw/id author writer level name owner private statement timeout olimit value/];
+use constant USER_PUBLIC_COLUMNS => [qw/id admin name town university level/];
+use constant JOBS_PER_PAGE => 10;
 
 sub dynsub{
 	our ($name, $sub) = @_;
@@ -33,6 +38,95 @@ BEGIN {
 		dynsub PL_N($rs) => sub { $_[0]->resultset($rsname)              };
 		dynsub      $rs  => sub { $_[0]->resultset($rsname)->find($_[1]) };
 	}
+}
+
+sub user_list {
+	my $rs = $_[0]->users->search(undef, {order_by => 'name', columns => USER_PUBLIC_COLUMNS});
+	[ map +{ $_->get_columns }, $rs->all ]
+}
+
+sub user_entry {
+	my ($self, $id) = @_;
+	+{ $self->users->find($id, {columns => USER_PUBLIC_COLUMNS})->get_columns }
+}
+
+sub problem_list {
+	my ($self, %args) = @_;
+	my $rs = $self->problems->search(undef, {order_by => 'me.name', columns => PROBLEM_PUBLIC_COLUMNS, prefetch => 'owner'});
+	$rs = $rs->search({-or => ['contest_problems.contest' => undef, 'contest.stop' => {'<=', time}], 'me.private' => 0}, {join => {'contest_problems' => 'contest'}, distinct => 1}) unless $args{contest};
+	$rs = $rs->search({'contest_problems.contest' => $args{contest}}, {join => 'contest_problems'}) if $args{contest};
+	$rs = $rs->search({'me.owner' => $args{owner}}) if $args{owner};
+	my %params;
+	$params{contest} = $args{contest} if $args{contest};
+	for ($rs->all) {
+		$params{$_->level} //= [];
+		push $params{$_->level}, {$_->get_columns, owner_name => $_->owner->name} ;
+	}
+	\%params
+}
+
+sub problem_entry {
+	my ($self, $id, $contest, $user) = @_;
+	my $pb = $self->problems->find($id, {columns => PROBLEM_PUBLIC_COLUMNS, prefetch => 'owner'});
+	my $running = $contest && $self->contest($contest)->is_running;
+	eval {
+		$self->opens->create({
+			contest => $contest,
+			problem => $id,
+			owner => $user,
+			time => time,
+		})
+	} if $running;
+	+{ $pb->get_columns, owner_name => $pb->owner->name, cansubmit => $contest ? $running : 1 }
+}
+
+sub contest_list {
+	my ($self, %args) = @_;
+	my $rs = $self->contests->search(undef, {order_by => {-desc => 'start'}, prefetch => 'owner'});
+	$rs = $rs->search({owner => $args{owner}}) if $args{owner};
+	my %params;
+	for ($rs->all) {
+		my $state = $_->is_pending ? 'pending' : $_->is_running ? 'running' : 'finished';
+		$params{$state} //= [];
+		push $params{$state}, { $_->get_columns, started => !$_->is_pending, owner_name => $_->owner->name };
+	}
+	\%params
+}
+
+sub contest_entry {
+	my ($self, $id) = @_;
+	my $ct = $self->contest($id);
+	+{ $ct->get_columns, started => !$ct->is_pending, owner_name => $ct->owner->name }
+}
+
+sub job_list {
+	my ($self, %args) = @_;
+	$args{page} //= 1;
+	my $rs = $self->jobs->search(undef, {order_by => {-desc => 'me.id'}, prefetch => ['problem', 'owner'], rows => JOBS_PER_PAGE, offset => ($args{page} - 1) * JOBS_PER_PAGE});
+	$rs = $rs->search({owner   => $args{owner}})   if $args{owner};
+	$rs = $rs->search({contest => $args{contest}}) if $args{contest};
+	$rs = $rs->search({problem => $args{problem}}) if $args{problem};
+	[map {
+		my %params = $_->get_columns;
+		$params{owner_name}   = $_->owner->name;
+		$params{problem_name} = $_->problem->name;
+		$params{results} &&= decode_json $params{results};
+		$params{size}      = length $params{source};
+		delete $params{source};
+		\%params
+	} $rs->all]
+}
+
+sub job_entry {
+	my ($self, $id) = @_;
+	my $job = $self->jobs->find($id, {prefetch => ['problem', 'owner']});
+	my %params = $job->get_columns;
+	$params{owner_name}   = $job->owner->name;
+	$params{problem_name} = $job->problem->name;
+	$params{results} &&= decode_json $params{results};
+	$params{size}      = length $params{source};
+	delete $params{source};
+	\%params
 }
 
 1;
@@ -116,6 +210,98 @@ Equivalent to C<< $schema->resultset('Problem')->find($id) >>
 =item user($id)
 
 Equivalent to C<< $schema->resultset('User')->find($id) >>
+
+=item user_list
+
+Returns a list of users as an arrayref containing hashrefs.
+
+=item user_entry($id)
+
+Returns a hashref with information about the user $id.
+
+=item problem_list([%args])
+
+Returns a list of problems grouped by level. A hashref with levels as keys.
+
+Takes the following arguments:
+
+=over
+
+=item owner
+
+Only show problems owned by this user
+
+=item contest
+
+Only show problems in this contest
+
+=back
+
+=item problem_entry($id, [$contest, $user])
+
+Returns a hashref with information about the problem $id. If $contest and $user are present, problem open data is updated.
+
+=item contest_list([%args])
+
+Returns a list of contests grouped by state. A hashref with the following keys:
+
+=over
+
+=item pending
+
+An arrayref of hashrefs representing pending contests
+
+=item running
+
+An arrayref of hashrefs representing running contests
+
+=item finished
+
+An arrayref of hashrefs representing finished contests
+
+=back
+
+Takes the following arguments:
+
+=over
+
+=item owner
+
+Only show contests owned by this user.
+
+=back
+
+=item contest_entry($id)
+
+Returns a hashref with information about the contest $id.
+
+=item job_list([%args])
+
+Returns a list of jobs as an arrayref containing hashrefs. Takes the following arguments:
+
+=over
+
+=item owner
+
+Only show jobs submitted by this user.
+
+=item contest
+
+Only show jobs submitted in this contest.
+
+=item problem
+
+Only show jobs submitted for this problem.
+
+=item page
+
+Show this page of results. Defaults to 1. Pages have 10 entries, and the first page has the most recent jobs.
+
+=back
+
+=item job_entry($id)
+
+Returns a hashref with information about the job $id.
 
 =back
 

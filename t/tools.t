@@ -22,7 +22,7 @@ withdb { $db->deploy };
 
 my $pipe;
 
-open $pipe, '|$perl gruntmaster-contest add ct';
+open $pipe, "|$perl gruntmaster-contest add ct";
 print $pipe <<'';
 My cool contest
 MGV
@@ -56,7 +56,7 @@ is_deeply \@list, [ sort @list2 ], 'gruntmaster-contest list';
 system $perl, 'gruntmaster-contest', 'rm', 'dummy';
 withdb { ok !$db->contest('dummy'), 'gruntmaster-contest rm' };
 
-open $pipe, '|$perl gruntmaster-problem add pb';
+open $pipe, "|$perl gruntmaster-problem add pb";
 print $pipe <<'';
 Test problem
 n

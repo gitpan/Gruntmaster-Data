@@ -177,11 +177,36 @@ __PACKAGE__->has_many(
 # Created by DBIx::Class::Schema::Loader v0.07039 @ 2014-05-16 15:23:08
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:Cho4zmn58Mytf2jHvgP+4g
 
+use Authen::Passphrase;
+use Authen::Passphrase::BlowfishCrypt;
 
-# You can replace this text with custom code or comments, and it will be preserved on regeneration
+sub check_passphrase {
+	my ($self, $pw) = @_;
+	Authen::Passphrase->from_rfc2307($self->passphrase)->match($pw)
+}
+
+sub set_passphrase {
+	my ($self, $pw) = @_;
+	$self->update({passphrase => Authen::Passphrase::BlowfishCrypt->new(
+		cost => 10,
+		passphrase => $pw,
+		salt_random => 1,
+	)})->as_rfc2307;
+}
+
 1;
 
 __END__
+
+=head1 METHODS
+
+=head2 check_passphrase(I<$passphrase>)
+
+Returns true if I<$passphrase> is the correct passphrase, false otherwise.
+
+=head2 set_passphrase(I<$passphrase>)
+
+Changes the passphrase to I<$passphrase>.
 
 =head1 AUTHOR
 
