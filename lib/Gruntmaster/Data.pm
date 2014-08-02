@@ -15,10 +15,11 @@ __PACKAGE__->load_namespaces;
 # Created by DBIx::Class::Schema::Loader v0.07039 @ 2014-03-05 13:11:39
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:dAEmtAexvUaNXLgYz2rNEg
 
-our $VERSION = '5999.000_007';
+our $VERSION = '5999.000_008';
 
 use Lingua::EN::Inflect qw/PL_N/;
 use JSON qw/decode_json/;
+use List::Util qw/sum/;
 use Sub::Name qw/subname/;
 
 use constant PROBLEM_PUBLIC_COLUMNS => [qw/id author writer level name owner private statement timeout olimit value/];
@@ -38,6 +39,60 @@ BEGIN {
 		dynsub PL_N($rs) => sub { $_[0]->resultset($rsname)              };
 		dynsub      $rs  => sub { $_[0]->resultset($rsname)->find($_[1]) };
 	}
+}
+
+use constant LEVEL_VALUES => {
+	beginner => 100,
+	easy => 250,
+	medium => 500,
+	hard => 1000,
+};
+
+sub calc_score{
+	my ($mxscore, $time, $tries, $totaltime) = @_;
+	my $score = $mxscore;
+	$time = 0 if $time < 0;
+	$time = 300 if $time > $totaltime;
+	$score = ($totaltime - $time) / $totaltime * $score;
+	$score -= $tries / 10 * $mxscore;
+	$score = $mxscore * 3 / 10 if $score < $mxscore * 3 / 10;
+	int $score + 0.5
+}
+
+sub standings {
+	my ($self, $ct) = @_;
+	$ct &&= $self->contest($ct);
+
+	my @problems = map { $_->problem } $self->contest_problems->search({contest => $ct && $ct->id}, {qw/join problem order_by problem.level/});
+	my (%scores, %tries);
+	for my $job ($self->jobs->search({contest => $ct && $ct->id}, {order_by => 'id'})) {
+		if ($ct) {
+			my $open = $self->opens->find($ct->id, $job->problem->id, $job->owner->id);
+			my $time = $job->date - ($open ? $open->time : $ct->start);
+			next if $time < 0;
+			my $value = $job->problem->value // LEVEL_VALUES->{$job->problem->level};
+			my $factor = $job->result ? 0 : 1;
+			$factor = $1 / 100 if $job->result_text =~ /^(\d+ )/;
+			$scores{$job->owner->id}{$job->problem->id} = int ($factor * calc_score ($value, $time, $tries{$job->owner->id}{$job->problem->id}++, $ct->stop - $ct->start));
+		} else {
+			no warnings 'numeric';
+			$scores{$job->owner->id}{$job->problem->id} = 0 + $job->result_text || ($job->result ? 0 : 100)
+		}
+	}
+
+	my @st = sort { $b->{score} <=> $a->{score} or $a->{user}->id cmp $b->{user}->id} map {
+		my $user = $_;
+		+{
+			user => $self->user($user),
+			score => sum (values $scores{$user}),
+			scores => [map { $scores{$user}{$_->id} // '-'} @problems],
+			problems => $ct,
+		}
+	} keys %scores;
+
+	$st[0]->{rank} = 1;
+	$st[$_]->{rank} = $st[$_ - 1]->{rank} + ($st[$_]->{score} < $st[$_ - 1]->{score}) for 1 .. $#st;
+	@st
 }
 
 sub user_list {
@@ -103,9 +158,9 @@ sub job_list {
 	my ($self, %args) = @_;
 	$args{page} //= 1;
 	my $rs = $self->jobs->search(undef, {order_by => {-desc => 'me.id'}, prefetch => ['problem', 'owner'], rows => JOBS_PER_PAGE, offset => ($args{page} - 1) * JOBS_PER_PAGE});
-	$rs = $rs->search({owner   => $args{owner}})   if $args{owner};
-	$rs = $rs->search({contest => $args{contest}}) if $args{contest};
-	$rs = $rs->search({problem => $args{problem}}) if $args{problem};
+	$rs = $rs->search({'me.owner' => $args{owner}})   if $args{owner};
+	$rs = $rs->search({contest    => $args{contest}}) if $args{contest};
+	$rs = $rs->search({problem    => $args{problem}}) if $args{problem};
 	[map {
 		my %params = $_->get_columns;
 		$params{owner_name}   = $_->owner->name;

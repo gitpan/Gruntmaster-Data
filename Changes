@@ -1,5 +1,10 @@
 Revision history for Perl extension Gruntmaster::Data.
 
+5999.000_008 2014-08-03T00:25+03:00
+ - Add a method for computing standings.
+ - Depend on Authen::Passphrase(::BlowfishCrypt)
+ - Fix bugs in user_list and set_passphrase
+
 5999.000_007 2014-07-20T01:38+03:00
  - Add some utility functions.
 

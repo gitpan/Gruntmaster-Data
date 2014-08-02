@@ -15,6 +15,8 @@ WriteMakefile(
 		   POSIX 0
 		   Term::ANSIColor 0
 
+		   Authen::Passphrase 0
+		   Authen::Passphrase::BlowfishCrypt 0
 		   Date::Parse 0
 		   DBIx::Class 0
 		   File::Slurp 0

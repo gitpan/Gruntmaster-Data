@@ -191,7 +191,7 @@ sub set_passphrase {
 		cost => 10,
 		passphrase => $pw,
 		salt_random => 1,
-	)})->as_rfc2307;
+	)->as_rfc2307});
 }
 
 1;
