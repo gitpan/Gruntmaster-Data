@@ -1,5 +1,9 @@
 Revision history for Perl extension Gruntmaster::Data.
 
+5999.000_009 2014-09-28T00:02+03:00
+ - Add page information to job_list
+ - Prevent experimental reference usage warnings
+
 5999.000_008 2014-08-03T00:25+03:00
  - Add a method for computing standings.
  - Depend on Authen::Passphrase(::BlowfishCrypt)

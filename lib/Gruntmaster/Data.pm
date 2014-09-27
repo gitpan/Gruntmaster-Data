@@ -15,11 +15,12 @@ __PACKAGE__->load_namespaces;
 # Created by DBIx::Class::Schema::Loader v0.07039 @ 2014-03-05 13:11:39
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:dAEmtAexvUaNXLgYz2rNEg
 
-our $VERSION = '5999.000_008';
+our $VERSION = '5999.000_009';
 
 use Lingua::EN::Inflect qw/PL_N/;
 use JSON qw/decode_json/;
 use List::Util qw/sum/;
+use PerlX::Maybe qw/maybe/;
 use Sub::Name qw/subname/;
 
 use constant PROBLEM_PUBLIC_COLUMNS => [qw/id author writer level name owner private statement timeout olimit value/];
@@ -84,7 +85,7 @@ sub standings {
 		my $user = $_;
 		+{
 			user => $self->user($user),
-			score => sum (values $scores{$user}),
+			score => sum (values %{$scores{$user}}),
 			scores => [map { $scores{$user}{$_->id} // '-'} @problems],
 			problems => $ct,
 		}
@@ -115,7 +116,7 @@ sub problem_list {
 	$params{contest} = $args{contest} if $args{contest};
 	for ($rs->all) {
 		$params{$_->level} //= [];
-		push $params{$_->level}, {$_->get_columns, owner_name => $_->owner->name} ;
+		push @{$params{$_->level}}, {$_->get_columns, owner_name => $_->owner->name} ;
 	}
 	\%params
 }
@@ -143,7 +144,7 @@ sub contest_list {
 	for ($rs->all) {
 		my $state = $_->is_pending ? 'pending' : $_->is_running ? 'running' : 'finished';
 		$params{$state} //= [];
-		push $params{$state}, { $_->get_columns, started => !$_->is_pending, owner_name => $_->owner->name };
+		push @{$params{$state}}, { $_->get_columns, started => !$_->is_pending, owner_name => $_->owner->name };
 	}
 	\%params
 }
@@ -157,19 +158,25 @@ sub contest_entry {
 sub job_list {
 	my ($self, %args) = @_;
 	$args{page} //= 1;
-	my $rs = $self->jobs->search(undef, {order_by => {-desc => 'me.id'}, prefetch => ['problem', 'owner'], rows => JOBS_PER_PAGE, offset => ($args{page} - 1) * JOBS_PER_PAGE});
+	my $rs = $self->jobs->search(undef, {order_by => {-desc => 'me.id'}, prefetch => ['problem', 'owner'], rows => JOBS_PER_PAGE, page => $args{page}});
 	$rs = $rs->search({'me.owner' => $args{owner}})   if $args{owner};
 	$rs = $rs->search({contest    => $args{contest}}) if $args{contest};
 	$rs = $rs->search({problem    => $args{problem}}) if $args{problem};
-	[map {
-		my %params = $_->get_columns;
-		$params{owner_name}   = $_->owner->name;
-		$params{problem_name} = $_->problem->name;
-		$params{results} &&= decode_json $params{results};
-		$params{size}      = length $params{source};
-		delete $params{source};
-		\%params
-	} $rs->all]
+	return {
+		log => [map {
+			my %params = $_->get_columns;
+			$params{owner_name}   = $_->owner->name;
+			$params{problem_name} = $_->problem->name;
+			$params{results} &&= decode_json $params{results};
+			$params{size}      = length $params{source};
+			delete $params{source};
+			\%params
+		} $rs->all],
+		current_page => $rs->pager->current_page,
+		maybe previous_page => $rs->pager->previous_page,
+		maybe next_page => $rs->pager->next_page,
+		maybe last_page => $rs->pager->last_page,
+	}
 }
 
 sub job_entry {
