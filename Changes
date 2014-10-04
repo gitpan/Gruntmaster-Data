@@ -1,5 +1,9 @@
 Revision history for Perl extension Gruntmaster::Data.
 
+5999.000_010 2014-10-05T00:32+03:00
+ - Depend on PerlX::Maybe
+ - Switch from JSON.pm to JSON::MaybeXS
+
 5999.000_009 2014-09-28T00:02+03:00
  - Add page information to job_list
  - Prevent experimental reference usage warnings

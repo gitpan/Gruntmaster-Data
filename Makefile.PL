@@ -12,6 +12,7 @@ WriteMakefile(
 	SIGN              => 1,
 	PREREQ_PM         => {
 		qw/Getopt::Long 0
+		   PerlX::Maybe 0
 		   POSIX 0
 		   Term::ANSIColor 0
 
@@ -22,7 +23,8 @@ WriteMakefile(
 		   File::Slurp 0
 		   IO::Prompter 0
 		   Lingua::EN::Inflect 0
-		   JSON 0
+		   JSON::MaybeXS 0
+		   PerlX::Maybe 0
 		   Sub::Name 0/,
 	},
 	BUILD_REQUIRES    => {

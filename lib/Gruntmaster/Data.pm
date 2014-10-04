@@ -15,10 +15,10 @@ __PACKAGE__->load_namespaces;
 # Created by DBIx::Class::Schema::Loader v0.07039 @ 2014-03-05 13:11:39
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:dAEmtAexvUaNXLgYz2rNEg
 
-our $VERSION = '5999.000_009';
+our $VERSION = '5999.000_010';
 
 use Lingua::EN::Inflect qw/PL_N/;
-use JSON qw/decode_json/;
+use JSON::MaybeXS qw/decode_json/;
 use List::Util qw/sum/;
 use PerlX::Maybe qw/maybe/;
 use Sub::Name qw/subname/;
