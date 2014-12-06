@@ -19,7 +19,7 @@ ok $db->contest('fc')->is_finished(25), 'is_finished';
 ok !$db->contest('rc')->is_finished(25), '!is_finished';
 ok $db->contest('rc')->is_running(25), 'is_running';
 
-$db->problems->create({id => 'pb', name => 'Problem', generator => 'Undef', runner => 'File', judge => 'Absolute', level => 'beginner', owner => 'MGV', statement => '...', testcnt => 1, timeout => 1, private => 0});
+$db->problems->create({id => 'pb', name => 'Problem', generator => 'Undef', runner => 'File', judge => 'Absolute', level => 'beginner', value => 100, owner => 'MGV', statement => '...', testcnt => 1, timeout => 1, private => 0});
 
 ok !$db->problem('pb')->is_private(25), '!is_private';
 $db->problem('pb')->update({private => 1});

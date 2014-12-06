@@ -9,6 +9,13 @@ use JSON qw/encode_json/;
 use Term::ANSIColor qw/RED RESET/;
 use Getopt::Long qw/:config require_order/;
 
+use constant LEVEL_VALUES => {
+	beginner => 100,
+	easy => 250,
+	medium => 500,
+	hard => 1000,
+};
+
 ##################################################
 
 my $dsn = $ENV{GRUNTMASTER_DSN} // 'dbi:Pg:';
@@ -27,6 +34,7 @@ sub cmd_add{
 	my $writer = prompt 'Problem statement writer (full name)';
 	my $owner = prompt 'Problem owner (username)';
 	my $level = prompt 'Problem level', -menu => "beginner\neasy\nmedium\nhard";
+	my $value = LEVEL_VALUES->{$level};
 	my $statement = read_file prompt 'File with problem statement', -complete => 'filenames';
 	my $generator = prompt 'Generator', -menu => "File\nRun\nUndef";
 	my $runner = prompt 'Runner', -menu => "File\nVerifier\nInteractive";
@@ -59,6 +67,7 @@ sub cmd_add{
 		id => $id,
 		name => $name,
 		level => $level,
+		value => $value,
 		statement => $statement,
 		author => $author,
 		writer => $writer,

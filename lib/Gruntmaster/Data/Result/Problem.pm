@@ -80,6 +80,11 @@ __PACKAGE__->table("problems");
   data_type: 'text'
   is_nullable: 0
 
+=head2 solution
+
+  data_type: 'text'
+  is_nullable: 1
+
 =head2 statement
 
   data_type: 'text'
@@ -103,7 +108,7 @@ __PACKAGE__->table("problems");
 =head2 value
 
   data_type: 'integer'
-  is_nullable: 1
+  is_nullable: 0
 
 =head2 genformat
 
@@ -150,6 +155,8 @@ __PACKAGE__->add_columns(
   { data_type => "boolean", default_value => \"false", is_nullable => 0 },
   "runner",
   { data_type => "text", is_nullable => 0 },
+  "solution",
+  { data_type => "text", is_nullable => 1 },
   "statement",
   { data_type => "text", is_nullable => 0 },
   "testcnt",
@@ -159,7 +166,7 @@ __PACKAGE__->add_columns(
   "timeout",
   { data_type => "real", is_nullable => 0 },
   "value",
-  { data_type => "integer", is_nullable => 1 },
+  { data_type => "integer", is_nullable => 0 },
   "genformat",
   { data_type => "text", is_nullable => 1 },
   "gensource",
@@ -255,8 +262,8 @@ Composing rels: L</contest_problems> -> contest
 __PACKAGE__->many_to_many("contests", "contest_problems", "contest");
 
 
-# Created by DBIx::Class::Schema::Loader v0.07039 @ 2014-05-16 15:03:32
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:tvap77v0faSMxFiLu1uggQ
+# Created by DBIx::Class::Schema::Loader v0.07042 @ 2014-12-07 00:51:56
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:KjAtOerTqBqtcMrBtwJ3Bw
 
 sub is_private {
 	my ($self, $time) = @_;

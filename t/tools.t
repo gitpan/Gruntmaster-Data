@@ -102,7 +102,7 @@ is `$perl gruntmaster-problem get pb author`, "Marius Gavrilescu\n", 'gruntmaste
 system $perl, 'gruntmaster-problem', 'set', 'pb', 'owner', 'nobody';
 withdb { is $db->problem('pb')->owner->id, 'nobody', 'gruntmaster-problem set' };
 
-withdb { $db->problems->create({id => 'dummy', name => 'Dummy', generator => 'Undef', runner => 'File', judge => 'Absolute', level => 'beginner', owner => 'MGV', statement => '...', testcnt => 1, timeout => 1}) };
+withdb { $db->problems->create({id => 'dummy', name => 'Dummy', generator => 'Undef', runner => 'File', judge => 'Absolute', level => 'beginner', value => 100, owner => 'MGV', statement => '...', testcnt => 1, timeout => 1}) };
 
 @list = sort `$perl gruntmaster-problem list`;
 chomp @list;

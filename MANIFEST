@@ -15,6 +15,8 @@ MANIFEST
 README
 t/Gruntmaster-Data.t
 t/tools.t
+t/perlcritic.t
+t/perlcriticrc
 META.yml                                 Module YAML meta-data (added by MakeMaker)
 META.json                                Module JSON meta-data (added by MakeMaker)
 SIGNATURE                                Public-key signature (added by MakeMaker)

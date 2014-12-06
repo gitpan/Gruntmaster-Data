@@ -1,5 +1,11 @@
 Revision history for Perl extension Gruntmaster::Data.
 
+5999.000_011 2014-12-07T00:55+02:00
+ - Make problem value NOT NULL
+ - Add contest_start and contest_stop to pb_entry
+ - Use perlcritic
+ - Add a "solution" column to problem
+
 5999.000_010 2014-10-05T00:32+03:00
  - Depend on PerlX::Maybe
  - Switch from JSON.pm to JSON::MaybeXS
