@@ -113,6 +113,21 @@ __PACKAGE__->set_primary_key("id");
 
 =head1 RELATIONS
 
+=head2 contest_statuses
+
+Type: has_many
+
+Related object: L<Gruntmaster::Data::Result::ContestStatus>
+
+=cut
+
+__PACKAGE__->has_many(
+  "contest_statuses",
+  "Gruntmaster::Data::Result::ContestStatus",
+  { "foreign.owner" => "self.id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 contests
 
 Type: has_many
@@ -158,6 +173,21 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 problem_statuses
+
+Type: has_many
+
+Related object: L<Gruntmaster::Data::Result::ProblemStatus>
+
+=cut
+
+__PACKAGE__->has_many(
+  "problem_statuses",
+  "Gruntmaster::Data::Result::ProblemStatus",
+  { "foreign.owner" => "self.id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 problems
 
 Type: has_many
@@ -174,8 +204,8 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07039 @ 2014-05-16 15:23:08
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:Cho4zmn58Mytf2jHvgP+4g
+# Created by DBIx::Class::Schema::Loader v0.07042 @ 2014-12-11 23:51:27
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:JcVHC/n8J+NgJge9LkckYA
 
 use Authen::Passphrase;
 use Authen::Passphrase::BlowfishCrypt;

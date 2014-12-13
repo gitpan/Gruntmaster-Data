@@ -6,9 +6,11 @@ gruntmaster-problem
 lib/Gruntmaster/Data.pm
 lib/Gruntmaster/Data/Result/Contest.pm
 lib/Gruntmaster/Data/Result/ContestProblem.pm
+lib/Gruntmaster/Data/Result/ContestStatus.pm
 lib/Gruntmaster/Data/Result/Job.pm
 lib/Gruntmaster/Data/Result/Open.pm
 lib/Gruntmaster/Data/Result/Problem.pm
+lib/Gruntmaster/Data/Result/ProblemStatus.pm
 lib/Gruntmaster/Data/Result/User.pm
 Makefile.PL
 MANIFEST

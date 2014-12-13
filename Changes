@@ -1,5 +1,12 @@
 Revision history for Perl extension Gruntmaster::Data.
 
+5999.000_012 2014-12-13T18:20+02:00
+ - Add solution to pb_entry
+ - Add {problem,contest}_status tables and a method that updates them
+ - Improve performance of standings, move it to Result/Contest.pm
+ - Add many new keys to us_entry
+ - Remove support for archive standings
+
 5999.000_011 2014-12-07T00:55+02:00
  - Make problem value NOT NULL
  - Add contest_start and contest_stop to pb_entry

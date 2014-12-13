@@ -20,6 +20,15 @@ CREATE TABLE contests (
 	CONSTRAINT positive_duration CHECK (stop > start)
 );
 
+CREATE TABLE contest_status (
+	contest TEXT NOT NULL REFERENCES contests ON DELETE CASCADE,
+	owner   TEXT NOT NULL REFERENCES users ON DELETE CASCADE,
+	score   INT  NOT NULL,
+	rank    INT  NOT NULL,
+
+	PRIMARY KEY (owner, contest)
+);
+
 CREATE TABLE problems (
 	id        TEXT      PRIMARY KEY,
 	author    TEXT,
@@ -65,6 +74,15 @@ CREATE TABLE jobs (
 	results     TEXT,
 	source      TEXT    NOT NULL,
 	owner       TEXT    NOT NULL REFERENCES users ON DELETE CASCADE
+);
+
+CREATE TABLE problem_status (
+	problem TEXT    NOT NULL REFERENCES problems ON DELETE CASCADE,
+	owner   TEXT    NOT NULL REFERENCES users ON DELETE CASCADE,
+	job     SERIAL  NOT NULL REFERENCES jobs ON DELETE CASCADE,
+	solved  BOOLEAN NOT NULL DEFAULT FALSE,
+
+	PRIMARY KEY (owner, problem)
 );
 
 CREATE TABLE opens (

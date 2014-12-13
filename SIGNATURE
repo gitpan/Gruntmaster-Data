@@ -14,23 +14,25 @@ not run its Makefile.PL or Build.PL.
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA512
 
-SHA1 d353e8af8443b4cd802d4d712a7209d40616eaf3 Changes
-SHA1 5676410d381a0980cb682c41565797bfde77b584 MANIFEST
-SHA1 1e864511171898e65a657b4c82069eb3eab81816 META.json
-SHA1 ce322d2ff4af621d4934dcbbd17e3be7ff5f4915 META.yml
+SHA1 fef24411f8f251b60aaa1e391892a618c3a80b1d Changes
+SHA1 3b1fdaff9d33fa49a40c7471911c6e988bc5e367 MANIFEST
+SHA1 b9bb23d31c280095f8a21411b6e3120cfab399a1 META.json
+SHA1 ada8a589ad8403d9d21d8270d4843f193b45293e META.yml
 SHA1 6cb626db6a965e81a0cdd3bef47c1fc1875a8cde Makefile.PL
-SHA1 b3c86fac2c2f70e6915f83c37e27ae551cfd17ed README
-SHA1 a413cb5d71db651f10e171214f93b89e78e6fdb8 db.sql
+SHA1 6cb2e7de6f4842adbe9409fd9cf6b75b43153496 README
+SHA1 9868816f6f040c86928d968bf46c8a5432be2400 db.sql
 SHA1 466afaee33cfbe8fc5ee13e644775888df5f2075 gruntmaster-contest
 SHA1 2e7e71f021b3045b21899c6afdbe47cf3bafa89e gruntmaster-job
 SHA1 9e5ab1c773782c169f7866e82614bb221ac1f3d9 gruntmaster-problem
-SHA1 7c7fc787f71d2912fd67a948005e0649558f5427 lib/Gruntmaster/Data.pm
-SHA1 2e494e0f2414ee6e5aa0eb697b3efd5529b8142a lib/Gruntmaster/Data/Result/Contest.pm
-SHA1 05880cbcdfa7aa45c2497034e2f18f5b1832243f lib/Gruntmaster/Data/Result/ContestProblem.pm
-SHA1 c6bd565749ec4598099821bf0654f20f5dc114b1 lib/Gruntmaster/Data/Result/Job.pm
-SHA1 f1790baa37824665dd11dceccc58aa764aacbf1d lib/Gruntmaster/Data/Result/Open.pm
-SHA1 401f8f407a19cdb7e16edd0b9f351404d02af9a3 lib/Gruntmaster/Data/Result/Problem.pm
-SHA1 1614e8da42ece5127458c1851251792be8e8bc75 lib/Gruntmaster/Data/Result/User.pm
+SHA1 d3518714ba33685ec2c8a955748dd446d037c037 lib/Gruntmaster/Data.pm
+SHA1 8556e5b8260c760b42b2e75290f0acfd2fd2b762 lib/Gruntmaster/Data/Result/Contest.pm
+SHA1 f7aba7ea9a8f3a26283b03292253ad14222eb9d5 lib/Gruntmaster/Data/Result/ContestProblem.pm
+SHA1 ecbef9fd00c93a2a815cafb92c54d5bc77bec93c lib/Gruntmaster/Data/Result/ContestStatus.pm
+SHA1 9d6a059627d4d324ba425cd98466894bc680f90d lib/Gruntmaster/Data/Result/Job.pm
+SHA1 e4a07443c4b7b9aa8c576542ae8ce741fd031a83 lib/Gruntmaster/Data/Result/Open.pm
+SHA1 c2c968330c403d9911b8da1edbcb95722436d0fb lib/Gruntmaster/Data/Result/Problem.pm
+SHA1 04634869f803ef949ed62160dfb38d522ecdc978 lib/Gruntmaster/Data/Result/ProblemStatus.pm
+SHA1 b46a591465bfef26f5a99901bc8a2bab4427c0de lib/Gruntmaster/Data/Result/User.pm
 SHA1 cbc56218990715980f31de73e92368c71a572bf3 t/Gruntmaster-Data.t
 SHA1 7da2d3506440a1e813d6e947bfa3a3715c0e2424 t/perlcritic.t
 SHA1 f5f60b9e4eb50e6da470c15327d1d169ac0eab19 t/perlcriticrc
@@ -38,17 +40,17 @@ SHA1 c7d7cbefd36487300c8f5caa698fe5304667fe50 t/tools.t
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1
 
-iQIcBAEBCgAGBQJUg4nEAAoJEMoENb5ewbNiUwQP/jbAG9gHoXoTL/zEDIlVTnZd
-evDElAzXiYqtxi0/ooM8ZSP73P8ZUnmvYZewmkVvWup99vJVJxvXOJU+bmkwQpMV
-dbEW9FMKBaNaEsXIW0F+NBsQya5wWcQqfsX7MbWICQRyeuuBYJX/u8EsWCSd7Jbr
-3gamxktDhBKIpXdqiyLkbp36B7xmdDlaPFGIeWTRt/jt5xftO0pXrBWqRnsMVXQY
-ixlXTNknRci2I4SYw/dZQMRbw4CrUVSwqwRwa5gg4H9XSjuVLjc/VqAxfZyhaavL
-cHmKkTRhsHTAKLed5Xcm4IGgXAfHqbFUvHIHt6v8+q6I/EmMQLQtu1sMQ07/jFIJ
-qLX9zVq+a9L+K31ZjenFo/IQu4BlP+N+FPfdNDDT9KcdmfFe3CqX3YE6/E/0aJfC
-0weCYsK19W4bVb7E+JXZPJyHwuPPGksz6FcEgGWVP689xouAqZJctdYEsGvkca55
-4ir/GdfGfMJvueNevwkU28o348XNTLNF8W9fdxzf26WfQORl5a9rrR2csmkjMMcf
-5SnH3nC22IEYxouIy03OtgqrtdYuso/pkK9Wz3Jry9G+E6cNbjl+p+HsKI25SahL
-DtIB88USofS6Z60Hvo7scitbZ6FDssFcb8Ucmrs8wyYdvh+cf0lJIU3Yf+4hZh80
-n9nypgVQM/kZWr5vz6GJ
-=zi31
+iQIcBAEBCgAGBQJUjGdbAAoJEMoENb5ewbNi8VwP/RXmpV/WqLjn150Ae4OMvLXn
+MjBEz8Zys4y9x5GywHXg6ni+VZuPVM2eJEoXsIpZsJ9mReT9MA8Vi/BK2DPFIErG
+Oertan8FRHNeWp7NEIvcziRIGLHgB2isFFiXPBpbKDsQhqjBqibNdQz5FGFaEHEn
+pNE5+vHLafF5W8S1KyZQvaTRH61tSjgKexjTSmoTG3f5cQwIZHjSpSqYIn2T9IEg
+zXIhiGBjcdQna6Zk4A3neE1x028Nu62iuozbh8QSB4hRbqfpL3vCQx1ASpbMoWzj
+Ko2cSFdLCITZPjxWd51BfmUZGN2hu0I7HZzdaRC26fRyaeyvpzzd7/VCQ28o861X
+nE/h5dXRx3dRoK4v7Fs3nBYst18pFAGdEiZP4vK8jE8B7Fx21jw40Q3GV8pcrLgQ
+O/3FLbWWHnR1MX5wvfLMVkjgyElaOJuVCY+G+ZF7CBTOYsNobx7nC7fr6lPali4p
+jjH8IcWUjipcQ4ztBIl3lCaExAgYh7aQ675+0gX6/r4/vV7cFcOOl5ITWu5LKpRX
+cOc/SZiSu441FH81GjH+M2Zs5dgjauYF/w1K7B0uL1j9K3PbnFUpus0NN8MesgSL
+ZqI5q13AfBiFJzZrUBM3wIicf1lZQkmejqmYDaWZpIZiXpNlbcbwiRDticLe0y9X
+t+PhOuk/6Jc7Pw58q816
+=iNM7
 -----END PGP SIGNATURE-----

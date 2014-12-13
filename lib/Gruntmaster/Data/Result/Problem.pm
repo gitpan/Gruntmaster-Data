@@ -251,6 +251,21 @@ __PACKAGE__->belongs_to(
   { is_deferrable => 0, on_delete => "CASCADE", on_update => "NO ACTION" },
 );
 
+=head2 problem_statuses
+
+Type: has_many
+
+Related object: L<Gruntmaster::Data::Result::ProblemStatus>
+
+=cut
+
+__PACKAGE__->has_many(
+  "problem_statuses",
+  "Gruntmaster::Data::Result::ProblemStatus",
+  { "foreign.problem" => "self.id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 contests
 
 Type: many_to_many
@@ -262,8 +277,8 @@ Composing rels: L</contest_problems> -> contest
 __PACKAGE__->many_to_many("contests", "contest_problems", "contest");
 
 
-# Created by DBIx::Class::Schema::Loader v0.07042 @ 2014-12-07 00:51:56
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:KjAtOerTqBqtcMrBtwJ3Bw
+# Created by DBIx::Class::Schema::Loader v0.07042 @ 2014-12-11 23:51:27
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:1SnNCeJdFr5lM3mmO6rtqA
 
 sub is_private {
 	my ($self, $time) = @_;

@@ -94,8 +94,9 @@ __PACKAGE__->belongs_to(
 # Created by DBIx::Class::Schema::Loader v0.07039 @ 2014-05-16 15:03:32
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:fG3PNI7Ar318nxMchtJNuA
 
+sub rawcontest { shift->get_column('contest') }
+sub rawproblem { shift->get_column('problem') }
 
-# You can replace this text with custom code or comments, and it will be preserved on regeneration
 1;
 
 __END__

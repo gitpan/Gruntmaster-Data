@@ -201,9 +201,28 @@ __PACKAGE__->belongs_to(
   { is_deferrable => 0, on_delete => "CASCADE", on_update => "NO ACTION" },
 );
 
+=head2 problem_statuses
 
-# Created by DBIx::Class::Schema::Loader v0.07039 @ 2014-05-16 15:03:32
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:k3Oq7pNqFoCI5NwY5GaWfQ
+Type: has_many
+
+Related object: L<Gruntmaster::Data::Result::ProblemStatus>
+
+=cut
+
+__PACKAGE__->has_many(
+  "problem_statuses",
+  "Gruntmaster::Data::Result::ProblemStatus",
+  { "foreign.job" => "self.id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
+
+# Created by DBIx::Class::Schema::Loader v0.07042 @ 2014-12-11 23:51:27
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:D49ekK0vGg/7b8xXZoYTWQ
+
+sub rawcontest { shift->get_column('contest') }
+sub rawowner { shift->get_column('owner') }
+sub rawproblem { shift->get_column('problem') }
 
 sub rerun {
 	shift->update({daemon => undef, result => -2, result_text => undef});

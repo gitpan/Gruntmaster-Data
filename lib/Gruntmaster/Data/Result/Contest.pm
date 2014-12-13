@@ -93,6 +93,21 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head2 contest_statuses
+
+Type: has_many
+
+Related object: L<Gruntmaster::Data::Result::ContestStatus>
+
+=cut
+
+__PACKAGE__->has_many(
+  "contest_statuses",
+  "Gruntmaster::Data::Result::ContestStatus",
+  { "foreign.contest" => "self.id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head2 jobs
 
 Type: has_many
@@ -149,8 +164,10 @@ Composing rels: L</contest_problems> -> problem
 __PACKAGE__->many_to_many("problems", "contest_problems", "problem");
 
 
-# Created by DBIx::Class::Schema::Loader v0.07039 @ 2014-05-16 15:03:32
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:8PPzBpDmSTq4ukKuxIlLlQ
+# Created by DBIx::Class::Schema::Loader v0.07042 @ 2014-12-11 23:51:27
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:nu+Io9AhYkzYCky5UpCaKQ
+
+use List::Util qw/sum/;
 
 sub is_pending {
 	my ($self, $time) = @_;
@@ -165,6 +182,51 @@ sub is_finished {
 sub is_running {
 	my ($self, $time) = @_;
 	!$self->is_pending($time) && !$self->is_finished($time)
+}
+
+sub calc_score{
+	my ($mxscore, $time, $tries, $totaltime) = @_;
+	my $score = $mxscore;
+	$time = 0 if $time < 0;
+	$time = 300 if $time > $totaltime;
+	$score = ($totaltime - $time) / $totaltime * $score;
+	$score -= $tries / 10 * $mxscore;
+	$score = $mxscore * 3 / 10 if $score < $mxscore * 3 / 10;
+	int $score + 0.5
+}
+
+sub standings {
+	my ($self) = @_;
+	my $ct = $self->id;
+
+	my @problems = map { $_->rawproblem } $self->contest_problems->search({contest => $ct}, {qw/join problem order_by problem.level/});
+	my (%scores, %tries, %opens);
+	$opens{$_->rawproblem, $_->rawowner} = $_ for $self->opens->search({contest => $ct});
+	for my $job ($self->jobs->search({contest => $ct}, {qw/order_by me.id prefetch/ => [qw/problem/]})) {
+		my $open = $opens{$job->rawproblem, $job->rawowner};
+		my $time = $job->date - ($open ? $open->time : $self->start);
+		next if $time < 0;
+		my $value = $job->problem->value;
+		my $factor = $job->result ? 0 : 1;
+		$factor = $1 / 100 if $job->result_text =~ /^(\d+ )/s;
+		$scores{$job->rawowner}{$job->rawproblem} = int ($factor * calc_score ($value, $time, $tries{$job->rawowner}{$job->rawproblem}++, $self->stop - $self->start));
+	}
+
+	my %user_to_name = map { $_->id => $_->name } $self->result_source->schema->users->all;
+
+	my @st = sort { $b->{score} <=> $a->{score} or $a->{user} cmp $b->{user} } map { ## no critic (ProhibitReverseSortBlock)
+		my $user = $_;
+		+{
+			user => $user,
+			user_name => $user_to_name{$user},
+			score => sum (values %{$scores{$user}}),
+			scores => [map { $scores{$user}{$_} // '-'} @problems],
+		}
+	} keys %scores;
+
+	$st[0]->{rank} = 1;
+	$st[$_]->{rank} = $st[$_ - 1]->{rank} + ($st[$_]->{score} < $st[$_ - 1]->{score}) for 1 .. $#st;
+	@st
 }
 
 1;

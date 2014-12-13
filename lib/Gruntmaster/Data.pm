@@ -15,11 +15,10 @@ __PACKAGE__->load_namespaces;
 # Created by DBIx::Class::Schema::Loader v0.07039 @ 2014-03-05 13:11:39
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:dAEmtAexvUaNXLgYz2rNEg
 
-our $VERSION = '5999.000_011';
+our $VERSION = '5999.000_012';
 
 use Lingua::EN::Inflect qw/PL_N/;
 use JSON::MaybeXS qw/decode_json/;
-use List::Util qw/sum/;
 use PerlX::Maybe qw/maybe/;
 use Sub::Name qw/subname/;
 
@@ -34,7 +33,7 @@ sub dynsub{
 }
 
 BEGIN {
-	for my $rs (qw/contest contest_problem job open problem user/) {
+	for my $rs (qw/contest contest_problem job open problem user problem_status contest_status/) {
 		my $rsname = ucfirst $rs;
 		$rsname =~ s/_([a-z])/\u$1/gs;
 		dynsub PL_N($rs) => sub { $_[0]->resultset($rsname)              };
@@ -42,61 +41,22 @@ BEGIN {
 	}
 }
 
-sub calc_score{
-	my ($mxscore, $time, $tries, $totaltime) = @_;
-	my $score = $mxscore;
-	$time = 0 if $time < 0;
-	$time = 300 if $time > $totaltime;
-	$score = ($totaltime - $time) / $totaltime * $score;
-	$score -= $tries / 10 * $mxscore;
-	$score = $mxscore * 3 / 10 if $score < $mxscore * 3 / 10;
-	int $score + 0.5
-}
-
-sub standings {
-	my ($self, $ct) = @_;
-	$ct &&= $self->contest($ct);
-
-	my @problems = map { $_->problem } $self->contest_problems->search({contest => $ct && $ct->id}, {qw/join problem order_by problem.level/});
-	my (%scores, %tries);
-	for my $job ($self->jobs->search({contest => $ct && $ct->id}, {order_by => 'id'})) {
-		if ($ct) {
-			my $open = $self->opens->find($ct->id, $job->problem->id, $job->owner->id);
-			my $time = $job->date - ($open ? $open->time : $ct->start);
-			next if $time < 0;
-			my $value = $job->problem->value;
-			my $factor = $job->result ? 0 : 1;
-			$factor = $1 / 100 if $job->result_text =~ /^(\d+ )/s;
-			$scores{$job->owner->id}{$job->problem->id} = int ($factor * calc_score ($value, $time, $tries{$job->owner->id}{$job->problem->id}++, $ct->stop - $ct->start));
-		} else {
-			no warnings 'numeric'; ## no critic (ProhibitNoWarnings)
-			$scores{$job->owner->id}{$job->problem->id} = 0 + $job->result_text || ($job->result ? 0 : 100)
-		}
-	}
-
-	my @st = sort { $b->{score} <=> $a->{score} or $a->{user}->id cmp $b->{user}->id} map { ## no critic (ProhibitReverseSortBlock)
-		my $user = $_;
-		+{
-			user => $self->user($user),
-			score => sum (values %{$scores{$user}}),
-			scores => [map { $scores{$user}{$_->id} // '-'} @problems],
-			problems => $ct,
-		}
-	} keys %scores;
-
-	$st[0]->{rank} = 1;
-	$st[$_]->{rank} = $st[$_ - 1]->{rank} + ($st[$_]->{score} < $st[$_ - 1]->{score}) for 1 .. $#st;
-	@st
-}
-
 sub user_list {
-	my $rs = $_[0]->users->search(undef, {order_by => 'name', columns => USER_PUBLIC_COLUMNS});
-	[ map { { $_->get_columns } } $rs->all ]
+	my $rs = $_[0]->users->search(undef, {columns => USER_PUBLIC_COLUMNS, prefetch => [qw/problem_statuses contest_statuses/]} );
+	[ sort { $b->{solved} <=> $a->{solved} or $b->{attempted} <=> $a->{attempted} } map { ## no critic (ProhibitReverseSort)
+		my $solved    = $_->problem_statuses->count(solved => 1);
+		my $attempted = $_->problem_statuses->count(solved => 0);
+		my $contests  = $_->contest_statuses->count;
+		+{ $_->get_columns, solved => $solved, attempted => $attempted, contests => $contests }
+	} $rs->all ]
 }
 
 sub user_entry {
 	my ($self, $id) = @_;
-	+{ $self->users->find($id, {columns => USER_PUBLIC_COLUMNS})->get_columns }
+	my $user = $self->users->find($id, {columns => USER_PUBLIC_COLUMNS, prefetch => [qw/problem_statuses contest_statuses/]});
+	my @problems = map { {problem => $_->get_column('problem'), solved => $_->solved} } $user->problem_statuses;
+	my @contests = map { {contest => $_->contest->id, contest_name => $_->contest->name, rank => $_->rank, score => $_->score} } $user->contest_statuses->search(undef, {prefetch => 'contest'});
+	+{ $user->get_columns, problems => \@problems, contests => \@contests }
 }
 
 sub problem_list {
@@ -116,8 +76,10 @@ sub problem_list {
 
 sub problem_entry {
 	my ($self, $id, $contest, $user) = @_;
-	my $pb = $self->problems->find($id, {columns => PROBLEM_PUBLIC_COLUMNS, prefetch => 'owner'});
 	my $running = $contest && $self->contest($contest)->is_running;
+	my $columns = PROBLEM_PUBLIC_COLUMNS;
+	push @$columns, 'solution' unless $running;
+	my $pb = $self->problems->find($id, {columns => $columns, prefetch => 'owner'});
 	eval { ## no critic (RequireCheckingReturnValueOfEval)
 		$self->opens->create({
 			contest => $contest,
@@ -183,6 +145,29 @@ sub job_entry {
 	$params{size}      = length $params{source};
 	delete $params{source};
 	\%params
+}
+
+sub update_status {
+	my ($self) = @_;
+	my @jobs = $self->jobs->search(undef, {cache => 1})->all;
+
+	my %hash;
+	$hash{$_->get_column('problem'), $_->get_column('owner')} = [$_->id, $_->result ? 0 : 1] for @jobs;
+	my @problem_statuses = map { [split ($;), @{$hash{$_}} ] } keys %hash;
+
+	my @contest_statuses = map {
+		my $contest = $_->id;
+		map { [$contest, $_->{user}, $_->{score}, $_->{rank}] } $_->standings
+	} $self->contests->all;
+
+	my $txn = sub {
+		$self->problem_statuses->delete;
+		$self->problem_statuses->populate([[qw/problem owner job solved/], @problem_statuses]);
+		$self->contest_statuses->delete;
+		$self->contest_statuses->populate([[qw/contest owner score rank/], @contest_statuses]);
+	};
+
+	$self->txn_do($txn);
 }
 
 1;
