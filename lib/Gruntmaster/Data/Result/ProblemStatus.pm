@@ -6,7 +6,7 @@ package Gruntmaster::Data::Result::ProblemStatus;
 
 =head1 NAME
 
-Gruntmaster::Data::Result::ProblemStatus
+Gruntmaster::Data::Result::ProblemStatus - List of (problem, user, result)
 
 =cut
 
@@ -48,6 +48,8 @@ __PACKAGE__->table("problem_status");
   data_type: 'boolean'
   default_value: false
   is_nullable: 0
+
+True if the result is Accepted, False otherwise
 
 =cut
 
@@ -130,9 +132,17 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07042 @ 2014-12-11 23:51:27
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:SUAwYQhgBtoCjtFSOMc4FQ
+# Created by DBIx::Class::Schema::Loader v0.07042 @ 2014-12-19 16:44:22
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:1OCTO6sM27DamVhQi3dWKg
 
+use Class::Method::Modifiers qw/after/;
 
-# You can replace this text with custom code or comments, and it will be preserved on regeneration
+sub rawowner { shift->get_column('owner') }
+
+after qw/insert update delete/ => sub {
+	my ($self) = @_;
+	Gruntmaster::Data::purge '/us/';
+	Gruntmaster::Data::purge '/us/' . $self->rawowner;
+};
+
 1;

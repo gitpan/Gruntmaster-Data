@@ -6,7 +6,7 @@ package Gruntmaster::Data::Result::Job;
 
 =head1 NAME
 
-Gruntmaster::Data::Result::Job
+Gruntmaster::Data::Result::Job - List of jobs
 
 =cut
 
@@ -41,25 +41,35 @@ __PACKAGE__->table("jobs");
   data_type: 'text'
   is_nullable: 1
 
+hostname:PID of daemon that last executed this job. NULL if never executed
+
 =head2 date
 
   data_type: 'bigint'
   is_nullable: 0
+
+Unix time when job was submitted
 
 =head2 errors
 
   data_type: 'text'
   is_nullable: 1
 
+Compiler errors
+
 =head2 extension
 
   data_type: 'text'
   is_nullable: 0
 
+File extension of submitted program, without a leading dot
+
 =head2 format
 
   data_type: 'text'
   is_nullable: 0
+
+Format (programming language) of submitted program
 
 =head2 private
 
@@ -78,15 +88,21 @@ __PACKAGE__->table("jobs");
   data_type: 'integer'
   is_nullable: 1
 
+Job result (integer constant from Gruntmaster::Daemon::Constants)
+
 =head2 result_text
 
   data_type: 'text'
   is_nullable: 1
 
+Job result (human-readable text)
+
 =head2 results
 
   data_type: 'text'
   is_nullable: 1
+
+Per-test results (JSON array of hashes with keys id (test number, counting from 1), result (integer constant from Gruntmaster::Daemon::Constants), result_text (human-readable text), time (execution time in decimal seconds))
 
 =head2 source
 
@@ -217,8 +233,10 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07042 @ 2014-12-11 23:51:27
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:D49ekK0vGg/7b8xXZoYTWQ
+# Created by DBIx::Class::Schema::Loader v0.07042 @ 2014-12-19 16:54:00
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:hEAVL5heV13+nalSmgr0WA
+
+use Class::Method::Modifiers qw/after/;
 
 sub rawcontest { shift->get_column('contest') }
 sub rawowner { shift->get_column('owner') }
@@ -227,6 +245,15 @@ sub rawproblem { shift->get_column('problem') }
 sub rerun {
 	shift->update({daemon => undef, result => -2, result_text => undef});
 }
+
+after qw/insert update delete/ => sub {
+	my ($self) = @_;
+	Gruntmaster::Data::purge '/us/';
+	Gruntmaster::Data::purge '/us/' . $self->rawowner;
+	Gruntmaster::Data::purge '/st/' . $self->rawcontest if $self->rawcontest;
+	Gruntmaster::Data::purge '/log/';
+	Gruntmaster::Data::purge '/log/' . $self->id;
+};
 
 1;
 

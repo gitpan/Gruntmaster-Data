@@ -95,7 +95,7 @@ sub cmd_set{
 	GetOptions ( 'file!' => \$file );
 	my ($id, %values) = @_;
 	%values = map { $_ => scalar read_file $values{$_} } keys %values if $file;
-	$db->problem($id)->update(\%values)
+	$db->problem($id)->update(\%values);
 }
 
 sub cmd_get{
@@ -109,7 +109,8 @@ sub cmd_list{
 }
 
 sub cmd_rm{
-	$db->problem(shift)->delete
+	my ($id) = @_;
+	$db->problem($id)->delete;
 }
 
 sub cmd_show{

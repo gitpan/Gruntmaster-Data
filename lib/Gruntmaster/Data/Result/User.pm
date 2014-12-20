@@ -6,7 +6,7 @@ package Gruntmaster::Data::Result::User;
 
 =head1 NAME
 
-Gruntmaster::Data::Result::User
+Gruntmaster::Data::Result::User - List of users
 
 =cut
 
@@ -33,6 +33,8 @@ __PACKAGE__->table("users");
   data_type: 'text'
   is_nullable: 1
 
+RFC2307-encoded passphrase
+
 =head2 admin
 
   data_type: 'boolean'
@@ -43,6 +45,8 @@ __PACKAGE__->table("users");
 
   data_type: 'text'
   is_nullable: 1
+
+Full name of user
 
 =head2 email
 
@@ -69,10 +73,14 @@ __PACKAGE__->table("users");
   data_type: 'text'
   is_nullable: 1
 
+Highschool, Undergraduate, Master, Doctorate or Other
+
 =head2 lastjob
 
   data_type: 'bigint'
   is_nullable: 1
+
+Unix time when this user last submitted a job
 
 =cut
 
@@ -204,8 +212,16 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07042 @ 2014-12-11 23:51:27
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:JcVHC/n8J+NgJge9LkckYA
+# Created by DBIx::Class::Schema::Loader v0.07042 @ 2014-12-19 16:54:00
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:LiA2+ZpTTelwZJtFpZRsbw
+
+use Class::Method::Modifiers qw/after/;
+
+after qw/insert update delete/ => sub {
+	my ($self) = @_;
+	Gruntmaster::Data::purge '/us/';
+	Gruntmaster::Data::purge '/us/' . $self->id;
+};
 
 use Authen::Passphrase;
 use Authen::Passphrase::BlowfishCrypt;

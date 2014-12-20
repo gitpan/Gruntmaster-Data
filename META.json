@@ -35,6 +35,7 @@
          "requires" : {
             "Authen::Passphrase" : "0",
             "Authen::Passphrase::BlowfishCrypt" : "0",
+            "Class::Method::Modifiers" : "0",
             "DBIx::Class" : "0",
             "Date::Parse" : "0",
             "File::Slurp" : "0",
@@ -56,5 +57,5 @@
          "url" : "https://git.ieval.ro/?p=gruntmaster-data.git"
       }
    },
-   "version" : "5999.000_012"
+   "version" : "5999.000_013"
 }

@@ -6,7 +6,7 @@ package Gruntmaster::Data::Result::ContestStatus;
 
 =head1 NAME
 
-Gruntmaster::Data::Result::ContestStatus
+Gruntmaster::Data::Result::ContestStatus - List of (contest, user, result)
 
 =cut
 
@@ -105,9 +105,17 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07042 @ 2014-12-11 23:51:27
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:vfOfZeATPRODifpgHO4L0A
+# Created by DBIx::Class::Schema::Loader v0.07042 @ 2014-12-19 16:44:22
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:IkY4FNON0SrxrP8oNOXoHg
 
+use Class::Method::Modifiers qw/after/;
 
-# You can replace this text with custom code or comments, and it will be preserved on regeneration
+sub rawowner { shift->get_column('owner') }
+
+after qw/insert update delete/ => sub {
+	my ($self) = @_;
+	Gruntmaster::Data::purge '/us/';
+	Gruntmaster::Data::purge '/us/' . $self->rawowner;
+};
+
 1;

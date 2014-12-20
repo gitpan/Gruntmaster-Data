@@ -15,10 +15,13 @@ __PACKAGE__->load_namespaces;
 # Created by DBIx::Class::Schema::Loader v0.07039 @ 2014-03-05 13:11:39
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:dAEmtAexvUaNXLgYz2rNEg
 
-our $VERSION = '5999.000_012';
+use parent qw/Exporter/;
+our $VERSION = '5999.000_013';
+our @EXPORT = qw/purge/; ## no critic (ProhibitAutomaticExportation)
 
 use Lingua::EN::Inflect qw/PL_N/;
 use JSON::MaybeXS qw/decode_json/;
+use HTTP::Tiny;
 use PerlX::Maybe qw/maybe/;
 use Sub::Name qw/subname/;
 
@@ -42,20 +45,30 @@ BEGIN {
 }
 
 sub user_list {
-	my $rs = $_[0]->users->search(undef, {columns => USER_PUBLIC_COLUMNS, prefetch => [qw/problem_statuses contest_statuses/]} );
+	my ($self) = @_;
+	my $rs = $self->users->search(undef, {columns => USER_PUBLIC_COLUMNS} );
+	my (%solved, %attempted, %contests);
+
+	for my $row ($self->problem_statuses->all) {
+		$solved   {$row->rawowner}++ if     $row->solved;
+		$attempted{$row->rawowner}++ unless $row->solved;
+	}
+	$contests{$_->rawowner}++ for $self->contest_statuses->all;
+
 	[ sort { $b->{solved} <=> $a->{solved} or $b->{attempted} <=> $a->{attempted} } map { ## no critic (ProhibitReverseSort)
-		my $solved    = $_->problem_statuses->count(solved => 1);
-		my $attempted = $_->problem_statuses->count(solved => 0);
-		my $contests  = $_->contest_statuses->count;
-		+{ $_->get_columns, solved => $solved, attempted => $attempted, contests => $contests }
+		my $id = $_->id;
+		+{ $_->get_columns,
+		   solved => ($solved{$id} // 0),
+		   attempted => ($attempted{$id} // 0),
+		   contests => ($contests{$id} // 0) }
 	} $rs->all ]
 }
 
 sub user_entry {
 	my ($self, $id) = @_;
 	my $user = $self->users->find($id, {columns => USER_PUBLIC_COLUMNS, prefetch => [qw/problem_statuses contest_statuses/]});
-	my @problems = map { {problem => $_->get_column('problem'), solved => $_->solved} } $user->problem_statuses;
-	my @contests = map { {contest => $_->contest->id, contest_name => $_->contest->name, rank => $_->rank, score => $_->score} } $user->contest_statuses->search(undef, {prefetch => 'contest'});
+	my @problems = map { {problem => $_->get_column('problem'), solved => $_->solved} } $user->problem_statuses->search(undef, {order_by => 'problem'});
+	my @contests = map { {contest => $_->contest->id, contest_name => $_->contest->name, rank => $_->rank, score => $_->score} } $user->contest_statuses->search(undef, {prefetch => 'contest', order_by => 'contest.start DESC'});
 	+{ $user->get_columns, problems => \@problems, contests => \@contests }
 }
 
@@ -114,7 +127,7 @@ sub contest_entry {
 sub job_list {
 	my ($self, %args) = @_;
 	$args{page} //= 1;
-	my $rs = $self->jobs->search(undef, {order_by => {-desc => 'me.id'}, prefetch => ['problem', 'owner'], rows => JOBS_PER_PAGE, page => $args{page}});
+	my $rs = $self->jobs->search({'me.private' => 0}, {order_by => {-desc => 'me.id'}, prefetch => ['problem', 'owner'], rows => JOBS_PER_PAGE, page => $args{page}});
 	$rs = $rs->search({'me.owner' => $args{owner}})   if $args{owner};
 	$rs = $rs->search({contest    => $args{contest}}) if $args{contest};
 	$rs = $rs->search({problem    => $args{problem}}) if $args{problem};
@@ -168,6 +181,13 @@ sub update_status {
 	};
 
 	$self->txn_do($txn);
+}
+
+my @PURGE_HOSTS = exists $ENV{PURGE_HOSTS} ? split ' ', $ENV{PURGE_HOSTS} : ();
+my $ht = HTTP::Tiny->new;
+
+sub purge {
+	$ht->request(PURGE => "http://$_$_[0]") for @PURGE_HOSTS;
 }
 
 1;

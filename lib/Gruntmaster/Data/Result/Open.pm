@@ -8,6 +8,10 @@ package Gruntmaster::Data::Result::Open;
 
 Gruntmaster::Data::Result::Open
 
+=head1 DESCRIPTION
+
+List of (contest, problem, user, time when user opened problem)
+
 =cut
 
 use strict;
@@ -123,11 +127,19 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07039 @ 2014-05-16 15:03:32
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:VihrUa/CI0cg8k8wpHxQDg
+# Created by DBIx::Class::Schema::Loader v0.07042 @ 2014-12-19 16:44:22
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:jAao0vjOW87mO37ZQhm4Cw
 
+use Class::Method::Modifiers qw/after/;
+
+sub rawcontest { shift->get_column('contest') }
 sub rawowner { shift->get_column('owner') }
 sub rawproblem { shift->get_column('problem') }
+
+after qw/insert update delete/ => sub {
+	my ($self) = @_;
+	Gruntmaster::Data::purge '/st/' . $self->rawcontest;
+};
 
 1;
 

@@ -32,7 +32,8 @@ END
 }
 
 sub cmd_rm{
-	$db->job(shift)->delete
+	my ($id) = @_;
+	$db->job($id)->delete;
 }
 
 sub cmd_get{
@@ -42,11 +43,12 @@ sub cmd_get{
 
 sub cmd_set{
 	my ($id, %values) = @_;
-	$db->job($id)->update(\%values)
+	$db->job($id)->update(\%values);
 }
 
 sub cmd_rerun{
-	$db->job(shift)->rerun
+	my ($id) = @_;
+	$db->job($id)->rerun;
 }
 
 ##################################################

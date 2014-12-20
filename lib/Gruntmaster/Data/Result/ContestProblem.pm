@@ -6,7 +6,7 @@ package Gruntmaster::Data::Result::ContestProblem;
 
 =head1 NAME
 
-Gruntmaster::Data::Result::ContestProblem
+Gruntmaster::Data::Result::ContestProblem - Many-to-many bridge between contests and problems
 
 =cut
 
@@ -91,11 +91,19 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.07039 @ 2014-05-16 15:03:32
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:fG3PNI7Ar318nxMchtJNuA
+# Created by DBIx::Class::Schema::Loader v0.07042 @ 2014-12-19 16:44:22
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:dTFBC3ZKB2T9SCiyQxxe2w
+
+use Class::Method::Modifiers qw/after/;
 
 sub rawcontest { shift->get_column('contest') }
 sub rawproblem { shift->get_column('problem') }
+
+after qw/insert update delete/ => sub {
+	my ($self) = @_;
+	Gruntmaster::Data::purge '/pb/';
+	Gruntmaster::Data::purge '/pb/' . $self->rawproblem;
+};
 
 1;
 

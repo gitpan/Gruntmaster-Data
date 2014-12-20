@@ -1,5 +1,12 @@
 Revision history for Perl extension Gruntmaster::Data.
 
+5999.000_013 2014-12-20T23:20+02:00
+ - Improve user_list performance
+ - Sort problem and contest lists in user_entry
+ - Add a purge sub and use it where needed.
+ - Add table and column comments
+ - Make job_list only return public jobs
+
 5999.000_012 2014-12-13T18:20+02:00
  - Add solution to pb_entry
  - Add {problem,contest}_status tables and a method that updates them

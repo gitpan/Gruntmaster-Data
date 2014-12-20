@@ -18,6 +18,7 @@ WriteMakefile(
 
 		   Authen::Passphrase 0
 		   Authen::Passphrase::BlowfishCrypt 0
+		   Class::Method::Modifiers 0
 		   Date::Parse 0
 		   DBIx::Class 0
 		   File::Slurp 0

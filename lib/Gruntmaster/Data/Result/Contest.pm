@@ -6,7 +6,7 @@ package Gruntmaster::Data::Result::Contest;
 
 =head1 NAME
 
-Gruntmaster::Data::Result::Contest
+Gruntmaster::Data::Result::Contest - List of contests
 
 =cut
 
@@ -38,10 +38,14 @@ __PACKAGE__->table("contests");
   data_type: 'integer'
   is_nullable: 0
 
+Unix time when contest starts
+
 =head2 stop
 
   data_type: 'integer'
   is_nullable: 0
+
+Unix time when contest ends
 
 =head2 owner
 
@@ -164,10 +168,17 @@ Composing rels: L</contest_problems> -> problem
 __PACKAGE__->many_to_many("problems", "contest_problems", "problem");
 
 
-# Created by DBIx::Class::Schema::Loader v0.07042 @ 2014-12-11 23:51:27
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:nu+Io9AhYkzYCky5UpCaKQ
+# Created by DBIx::Class::Schema::Loader v0.07042 @ 2014-12-19 16:54:00
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:IxxZqQwKisBwDabCNUD55Q
 
+use Class::Method::Modifiers qw/after/;
 use List::Util qw/sum/;
+
+after qw/insert update delete/ => sub {
+	my ($self) = @_;
+	Gruntmaster::Data::purge '/ct/';
+	Gruntmaster::Data::purge '/ct/' . $self->id;
+};
 
 sub is_pending {
 	my ($self, $time) = @_;

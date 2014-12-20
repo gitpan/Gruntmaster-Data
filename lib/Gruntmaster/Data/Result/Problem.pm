@@ -6,7 +6,7 @@ package Gruntmaster::Data::Result::Problem;
 
 =head1 NAME
 
-Gruntmaster::Data::Result::Problem
+Gruntmaster::Data::Result::Problem - List of problems
 
 =cut
 
@@ -33,25 +33,35 @@ __PACKAGE__->table("problems");
   data_type: 'text'
   is_nullable: 1
 
+Full name(s) of problem author(s)/problemsetter(s)/tester(s)/etc
+
 =head2 writer
 
   data_type: 'text'
   is_nullable: 1
+
+Full name(s) of statement writer(s) (DEPRECATED)
 
 =head2 generator
 
   data_type: 'text'
   is_nullable: 0
 
+Generator class, without the leading Gruntmaster::Daemon::Generator::
+
 =head2 judge
 
   data_type: 'text'
   is_nullable: 0
 
+Judge class, without the leading Gruntmaster::Daemon::Judge::
+
 =head2 level
 
   data_type: 'text'
   is_nullable: 0
+
+Problem level, one of beginner, easy, medium, hard
 
 =head2 name
 
@@ -62,6 +72,8 @@ __PACKAGE__->table("problems");
 
   data_type: 'integer'
   is_nullable: 1
+
+Output limit (in bytes)
 
 =head2 owner
 
@@ -80,55 +92,77 @@ __PACKAGE__->table("problems");
   data_type: 'text'
   is_nullable: 0
 
+Runner class, without the leading Gruntmaster::Daemon::Runner::
+
 =head2 solution
 
   data_type: 'text'
   is_nullable: 1
+
+Solution (HTML)
 
 =head2 statement
 
   data_type: 'text'
   is_nullable: 0
 
+Statement (HTML)
+
 =head2 testcnt
 
   data_type: 'integer'
   is_nullable: 0
+
+Number of tests
 
 =head2 tests
 
   data_type: 'text'
   is_nullable: 1
 
+JSON array of test values for ::Runner::File
+
 =head2 timeout
 
   data_type: 'real'
   is_nullable: 0
+
+Time limit (in seconds)
 
 =head2 value
 
   data_type: 'integer'
   is_nullable: 0
 
+Problem value when used in a contest.
+
 =head2 genformat
 
   data_type: 'text'
   is_nullable: 1
+
+Format (programming language) of the generator if using the Run generator
 
 =head2 gensource
 
   data_type: 'text'
   is_nullable: 1
 
+Source code of generator if using the Run generator
+
 =head2 verformat
 
   data_type: 'text'
   is_nullable: 1
 
+Format (programming language) of the verifier if using the Verifier runner
+
 =head2 versource
 
   data_type: 'text'
   is_nullable: 1
+
+Source code of verifier if using the Verifier runner
 
 =cut
 
@@ -277,8 +311,16 @@ Composing rels: L</contest_problems> -> contest
 __PACKAGE__->many_to_many("contests", "contest_problems", "contest");
 
 
-# Created by DBIx::Class::Schema::Loader v0.07042 @ 2014-12-11 23:51:27
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:1SnNCeJdFr5lM3mmO6rtqA
+# Created by DBIx::Class::Schema::Loader v0.07042 @ 2014-12-19 16:54:00
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:QZHyWOWaPmTm/EQ5M22CGA
+
+use Class::Method::Modifiers qw/after/;
+
+after qw/insert update delete/ => sub {
+	my ($self) = @_;
+	Gruntmaster::Data::purge '/pb/';
+	Gruntmaster::Data::purge '/pb/' . $self->id;
+};
 
 sub is_private {
 	my ($self, $time) = @_;
